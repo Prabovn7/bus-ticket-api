@@ -1,1 +1,4 @@
 # Runtime dependencies. Each commit adds only what it uses.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic-settings>=2
