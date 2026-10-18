@@ -15,8 +15,7 @@ from app.core.db import Base
 
 class City(Base):
     __tablename__ = "cities"
-    __table_args__ = (UniqueConstraint(
-        "name", "uf", name="uq_cities_name_uf"),)
+    __table_args__ = (UniqueConstraint("name", "uf", name="uq_cities_name_uf"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120))
@@ -33,19 +32,14 @@ class Route(Base):
 class RouteStop(Base):
     __tablename__ = "route_stops"
     __table_args__ = (
-        UniqueConstraint("route_id", "city_id",
-                         name="uq_route_stops_route_id_city_id"),
-        CheckConstraint("offset_minutes >= 0",
-                        name="ck_route_stops_offset_non_negative"),
-        CheckConstraint("price_to_next_cents >= 0",
-                        name="ck_route_stops_price_non_negative"),
+        UniqueConstraint("route_id", "city_id", name="uq_route_stops_route_id_city_id"),
+        CheckConstraint("offset_minutes >= 0", name="ck_route_stops_offset_non_negative"),
+        CheckConstraint("price_to_next_cents >= 0", name="ck_route_stops_price_non_negative"),
         Index("ix_route_stops_city_id", "city_id"),
     )
 
-    route_id: Mapped[int] = mapped_column(
-        ForeignKey("routes.id"), primary_key=True)
-    position: Mapped[int] = mapped_column(
-        primary_key=True, autoincrement=False)
+    route_id: Mapped[int] = mapped_column(ForeignKey("routes.id"), primary_key=True)
+    position: Mapped[int] = mapped_column(primary_key=True, autoincrement=False)
     city_id: Mapped[int] = mapped_column(ForeignKey("cities.id"))
     offset_minutes: Mapped[int]
     price_to_next_cents: Mapped[int | None]
