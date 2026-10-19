@@ -3,11 +3,14 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.db import get_session
+from app.main import create_app
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -49,3 +52,11 @@ def session(db_engine):
             conn.execute(text(f"truncate table {names} restart identity cascade"))
     with Session(db_engine) as session:
         yield session
+
+
+@pytest.fixture
+def client(session):
+    app = create_app()
+    app.dependency_overrides[get_session] = lambda: session
+    with TestClient(app) as test_client:
+        yield test_client
