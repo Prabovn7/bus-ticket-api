@@ -26,6 +26,12 @@ class InvalidSearch(DomainError):
     message = "Escolha cidades diferentes para origem e destino."
 
 
+class EmailAlreadyRegistered(DomainError):
+    status_code = 409
+    code = "email_already_registered"
+    message = "Este e-mail já está cadastrado."
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(DomainError)
     async def handle_domain_error(request: Request, exc: DomainError) -> JSONResponse:
