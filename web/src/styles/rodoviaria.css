@@ -1,0 +1,229 @@
+/* Ônibora: tokens e base. Claro por padrão; escuro por :root[data-tema='escuro'].
+   O atributo data-tema é aplicado pelo script do index.html e pelo hook useTheme. */
+
+:root {
+  color-scheme: light;
+
+  --papel: #f1f3f4;
+  --papel-2: #dde2e6;
+  --tinta: #15202b;
+  --tinta-suave: #4a5866;
+  --superficie: #ffffff;
+  --foco: #15202b;
+
+  --quadro: #10263b;
+  --quadro-2: #1b3a56;
+  --quadro-linha: #2f4f6c;
+  --quadro-texto: #e6eef4;
+  --quadro-mudo: #a9bccb;
+
+  --ambar: #ffb300;
+  --sobre-ambar: #15202b;
+  --livre: #1b7254;
+  --livre-claro: #5bd6a5;
+  --alerta: #c8372d;
+  --alerta-claro: #ff9a91;
+  --sobre-alerta: #ffffff;
+
+  --fonte-texto: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --fonte-titulo: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+
+  --dur-rapida: 140ms;
+  --dur-media: 220ms;
+  --dur-lenta: 420ms;
+  --curva: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --mola: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+:root[data-tema='escuro'] {
+  color-scheme: dark;
+
+  --papel: #0d1722;
+  --papel-2: #22364a;
+  --tinta: #e6eef4;
+  --tinta-suave: #a9bccb;
+  --superficie: #15263a;
+  --foco: #e6eef4;
+
+  --quadro: #183552;
+  --quadro-2: #234b70;
+  --quadro-linha: #3f6890;
+
+  --alerta: #ff8a80;
+  --sobre-alerta: #15202b;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--fonte-texto);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 0.75rem;
+  font-family: var(--fonte-titulo);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+}
+
+h1 {
+  font-size: clamp(2.25rem, 6vw, 3.5rem);
+}
+
+:focus-visible {
+  outline: 3px solid var(--foco);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--ambar) 60%, transparent);
+}
+
+/* Pular para o conteúdo */
+.pular {
+  position: absolute;
+  left: 0.5rem;
+  top: -4rem;
+  z-index: 10;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--ambar);
+  color: var(--sobre-ambar);
+  font-weight: 700;
+}
+
+.pular:focus {
+  top: 0.5rem;
+}
+
+/* Topo */
+.topo {
+  background: var(--quadro);
+  color: var(--quadro-texto);
+  --foco: var(--quadro-texto);
+}
+
+.topo-interno {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0.5rem 1rem;
+}
+
+.marca {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-family: var(--fonte-titulo);
+  font-size: 1.875rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+}
+
+.topo-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.topo-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border-bottom: 3px solid transparent;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color var(--dur-rapida) var(--curva);
+}
+
+.topo-nav a[aria-current='page'] {
+  border-bottom-color: var(--ambar);
+}
+
+.botao-tema {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--quadro-linha);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color var(--dur-rapida) var(--curva);
+}
+
+.botao-tema svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (hover: hover) {
+  .topo-nav a:hover {
+    border-bottom-color: var(--quadro-linha);
+  }
+
+  .botao-tema:hover {
+    background: var(--quadro-2);
+  }
+}
+
+/* Conteúdo e rodapé */
+.conteudo {
+  flex: 1;
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.conteudo:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.rodape {
+  padding: 1rem;
+  border-top: 1px solid var(--papel-2);
+  color: var(--tinta-suave);
+  font-size: 0.9375rem;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
