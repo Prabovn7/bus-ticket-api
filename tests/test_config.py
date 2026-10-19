@@ -7,5 +7,6 @@ def test_database_url_is_built_from_parts():
         postgres_user="user",
         postgres_password="p@ss",
         postgres_db="db",
+        jwt_secret="x" * 32,
     )
     assert settings.database_url == "postgresql+psycopg://user:p%40ss@localhost:5432/db"

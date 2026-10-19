@@ -8,6 +8,7 @@ class DomainError(Exception):
     status_code: int = 400
     code: str = "domain_error"
     message: str = "Operação inválida."
+    headers: dict[str, str] | None = None
 
     def __init__(self, message: str | None = None) -> None:
         self.message = message or self.message
@@ -32,10 +33,26 @@ class EmailAlreadyRegistered(DomainError):
     message = "Este e-mail já está cadastrado."
 
 
+class Unauthorized(DomainError):
+    status_code = 401
+    headers = {"WWW-Authenticate": "Bearer"}
+
+
+class InvalidCredentials(Unauthorized):
+    code = "invalid_credentials"
+    message = "E-mail ou senha incorretos."
+
+
+class NotAuthenticated(Unauthorized):
+    code = "not_authenticated"
+    message = "Credenciais ausentes, inválidas ou expiradas."
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(DomainError)
     async def handle_domain_error(request: Request, exc: DomainError) -> JSONResponse:
         return JSONResponse(
             status_code=exc.status_code,
             content={"code": exc.code, "message": exc.message},
+            headers=exc.headers,
         )

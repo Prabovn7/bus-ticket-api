@@ -1,6 +1,7 @@
 from functools import lru_cache
 from urllib.parse import quote_plus
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +14,8 @@ class Settings(BaseSettings):
     postgres_host: str = "localhost"
     postgres_port: int = 5432
     redis_url: str = "redis://localhost:6379/0"
+    jwt_secret: str = Field(min_length=32)
+    jwt_expire_minutes: int = 15
 
     @property
     def database_url(self) -> str:
