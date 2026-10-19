@@ -1,0 +1,256 @@
+/* Formulário de busca */
+.busca {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--papel-2);
+  border-radius: 0.75rem;
+  background: var(--superficie);
+}
+
+@media (min-width: 48rem) {
+  .busca {
+    grid-template-columns: 1fr auto 1fr 11rem auto;
+    align-items: end;
+  }
+}
+
+.campo {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.campo label {
+  font-weight: 700;
+}
+
+select,
+input[type='date'] {
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border: 2px solid var(--tinta-suave);
+  border-radius: 0.5rem;
+  background: var(--superficie);
+  color: var(--tinta);
+  font: inherit;
+  font-size: 1rem;
+}
+
+/* Botões */
+.botao {
+  min-height: 44px;
+  padding: 0 1.25rem;
+  border: 2px solid transparent;
+  border-radius: 0.5rem;
+  background: var(--ambar);
+  color: var(--sobre-ambar);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-rapida) var(--curva),
+    transform var(--dur-rapida) var(--curva);
+}
+
+.botao:active {
+  transform: translateY(1px);
+}
+
+.botao-quadro {
+  border-color: var(--ambar);
+  background: transparent;
+  color: var(--quadro-texto);
+}
+
+.botao-inverter {
+  display: grid;
+  place-items: center;
+  justify-self: start;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 2px solid var(--tinta-suave);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--tinta);
+  cursor: pointer;
+}
+
+.botao-inverter svg,
+.icone-erro {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (hover: hover) {
+  .botao:hover {
+    background-color: color-mix(in srgb, var(--ambar) 85%, white);
+  }
+
+  .botao-quadro:hover {
+    background-color: var(--quadro-2);
+  }
+
+  .botao-inverter:hover {
+    background-color: var(--papel-2);
+  }
+}
+
+/* Quadro de partidas */
+.quadro {
+  --foco: var(--quadro-texto);
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: var(--quadro);
+  color: var(--quadro-texto);
+}
+
+.quadro-estado {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+}
+
+.quadro-estado p {
+  margin: 0;
+}
+
+.atalhos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.erro-texto {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  color: var(--alerta-claro);
+  font-weight: 700;
+}
+
+.icone-erro {
+  flex: none;
+  margin-top: 0.1rem;
+}
+
+.esqueleto {
+  display: grid;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.esqueleto span {
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  background: var(--quadro-linha);
+  animation: respira 1.6s ease-in-out infinite;
+}
+
+@keyframes respira {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Tabela no desktop, lista no celular: o mesmo conteúdo, o CSS escolhe. */
+.tabela-viagens {
+  display: none;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.lista-viagens {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 40rem) {
+  .tabela-viagens {
+    display: table;
+  }
+
+  .lista-viagens {
+    display: none;
+  }
+}
+
+.tabela-viagens caption {
+  padding: 0 0 0.75rem;
+  color: var(--quadro-mudo);
+  text-align: left;
+}
+
+.tabela-viagens th {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--quadro-linha);
+  color: var(--quadro-mudo);
+  font-weight: 600;
+  text-align: left;
+}
+
+.tabela-viagens td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--quadro-linha);
+  font-variant-numeric: tabular-nums;
+  vertical-align: top;
+}
+
+.hora {
+  font-family: var(--fonte-titulo);
+  font-size: 1.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.preco {
+  color: var(--ambar);
+  font-family: var(--fonte-titulo);
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.dia-seguinte {
+  display: block;
+  color: var(--quadro-mudo);
+  font-size: 0.875rem;
+}
+
+.viagem {
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--quadro-linha);
+}
+
+.viagem:first-child {
+  border-top: 0;
+}
+
+.viagem-horas {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.viagem-detalhes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  margin-top: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}

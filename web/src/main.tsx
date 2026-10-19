@@ -6,6 +6,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './styles/rodoviaria.css'
+import './styles/busca.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
