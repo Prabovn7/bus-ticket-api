@@ -21,3 +21,14 @@ def token(client, user):
     )
     assert response.status_code == 200
     return response.json()["access_token"]
+
+
+@pytest.fixture
+def login(client, user):
+    def do_login():
+        return client.post(
+            "/api/auth/login",
+            json={"email": user["email"], "password": user["password"]},
+        )
+
+    return do_login

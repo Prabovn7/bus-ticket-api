@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     jwt_secret: str = Field(min_length=32)
     jwt_expire_minutes: int = 15
+    refresh_expire_hours: int = 24
+    cookie_secure: bool = False
 
     @property
     def database_url(self) -> str:
