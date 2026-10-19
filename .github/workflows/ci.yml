@@ -43,6 +43,7 @@ jobs:
       POSTGRES_HOST: localhost
       POSTGRES_PORT: "5432"
       REDIS_URL: redis://localhost:6379/0
+      JWT_SECRET: segredo-so-do-ci-nao-usado-em-lugar-nenhum-0123456789
 
     steps:
       - uses: actions/checkout@v4
