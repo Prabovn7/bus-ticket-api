@@ -1,8 +1,8 @@
-import { apiFetch } from "./client";
-import type { City, TripResult } from "./types";
+import { apiFetch } from './client'
+import type { City, TripResult } from './types'
 
 export function listCities(signal?: AbortSignal): Promise<City[]> {
-  return apiFetch<City[]>("/api/cities", signal ? { signal } : undefined);
+  return apiFetch<City[]>('/api/cities', signal ? { signal } : undefined)
 }
 
 export function searchTrips(
@@ -15,6 +15,6 @@ export function searchTrips(
     origin: String(origin),
     destination: String(destination),
     date,
-  });
-  return apiFetch<TripResult[]>(`/api/trips?${params.toString()}`, { signal });
+  })
+  return apiFetch<TripResult[]>(`/api/trips?${params.toString()}`, { signal })
 }

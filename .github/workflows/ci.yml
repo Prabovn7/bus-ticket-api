@@ -71,7 +71,6 @@ jobs:
     defaults:
       run:
         working-directory: web
-
     steps:
       - uses: actions/checkout@v4
 
@@ -92,3 +91,9 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint

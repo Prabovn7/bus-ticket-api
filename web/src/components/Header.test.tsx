@@ -29,8 +29,6 @@ describe('Header', () => {
     renderHeader()
     await user.click(screen.getByRole('button', { name: 'Mudar para o tema escuro' }))
     expect(document.documentElement.dataset.tema).toBe('escuro')
-    expect(
-      screen.getByRole('button', { name: 'Mudar para o tema claro' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Mudar para o tema claro' })).toBeInTheDocument()
   })
 })
