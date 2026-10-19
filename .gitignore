@@ -27,3 +27,7 @@ desktop.ini
 
 # Logs
 *.log
+
+# Node (front-end em web/)
+node_modules/
+coverage/
