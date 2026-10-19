@@ -22,6 +22,7 @@ Object.defineProperty(window, 'matchMedia', {
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
   localStorage.clear()
   document.documentElement.removeAttribute('data-tema')
 })
