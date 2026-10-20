@@ -5,11 +5,14 @@ import '@fontsource/barlow-condensed/700.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
-import './styles/rodoviaria.css'
+import { AuthProvider } from './auth/AuthProvider.tsx'
 import './styles/busca.css'
+import './styles/rodoviaria.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </StrictMode>,
 )
