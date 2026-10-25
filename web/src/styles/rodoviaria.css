@@ -132,6 +132,7 @@ h1 {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
+  color: var(--quadro-texto);
   font-family: var(--fonte-titulo);
   font-size: 1.875rem;
   font-weight: 700;
