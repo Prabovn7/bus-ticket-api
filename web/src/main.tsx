@@ -9,6 +9,7 @@ import { AuthProvider } from './auth/AuthProvider.tsx'
 // A ordem importa: tokens e base primeiro, estilos de tela depois (o último vence).
 import './styles/rodoviaria.css'
 import './styles/busca.css'
+import './styles/conta.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
