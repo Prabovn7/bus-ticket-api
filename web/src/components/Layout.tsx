@@ -1,7 +1,10 @@
 import { Outlet } from 'react-router'
+import { usePageAnnouncement } from '../a11y/usePageAnnouncement'
 import Header from './Header'
 
 function Layout() {
+  usePageAnnouncement()
+
   return (
     <>
       <a className="pular" href="#conteudo">

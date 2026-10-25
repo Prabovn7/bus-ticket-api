@@ -209,6 +209,12 @@ h1 {
   box-shadow: none;
 }
 
+/* O título recebe foco por código ao trocar de tela; não é um controle, então sem anel. */
+h1[tabindex='-1']:focus {
+  outline: none;
+  box-shadow: none;
+}
+
 .rodape {
   padding: 1rem;
   border-top: 1px solid var(--papel-2);
