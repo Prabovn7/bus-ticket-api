@@ -254,3 +254,45 @@ input[type='date'] {
   margin-top: 0.25rem;
   font-variant-numeric: tabular-nums;
 }
+
+/* Placa de horário (FlapTime): folhas com dobradiça no meio. */
+.placa-hora {
+  position: relative;
+  display: inline-block;
+}
+
+.placa-folhas {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.folha {
+  position: relative;
+  display: inline-block;
+  min-width: 0.85em;
+  padding: 0.04em 0.1em;
+  border-radius: 0.18em;
+  background: linear-gradient(
+    to bottom,
+    var(--quadro-2) 50%,
+    color-mix(in srgb, var(--quadro-2) 70%, var(--quadro)) 50%
+  );
+  color: var(--quadro-texto);
+  line-height: 1.15;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.folha::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  height: 1px;
+  background: var(--quadro-linha);
+}
+
+.folha-separador {
+  padding-inline: 0.05em;
+}
