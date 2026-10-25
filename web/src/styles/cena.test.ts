@@ -114,3 +114,35 @@ describe('CSS da cena: cores', () => {
     }
   })
 })
+
+describe('CSS da cena: botão de pausa', () => {
+  it('com data-pausada, toda classe que anima fica em pausa', () => {
+    const animated = [...beforeReduced.matchAll(/(\.[\w-]+)\s*\{[^}]*\banimation:/g)].map(
+      (match) => match[1],
+    )
+    const rule = cena.match(/([^{}]*\.cena\[data-pausada\][^{}]*)\{([^}]*)\}/)
+
+    expect(animated.length).toBeGreaterThanOrEqual(4)
+    expect(rule).not.toBeNull()
+    expect(rule?.[2]).toMatch(/animation-play-state:\s*paused/)
+    for (const selector of animated) {
+      expect(rule?.[1], selector).toContain(`.cena[data-pausada] ${selector}`)
+    }
+  })
+
+  it('o alvo de toque tem pelo menos 44 px de altura', () => {
+    expect(ruleBody(cena, '.cena-pausa')).toMatch(/min-height:\s*2\.75rem/)
+  })
+
+  it.each([
+    { theme: 'claro', tokens: claro },
+    { theme: 'escuro', tokens: escuro },
+  ])('tema $theme: o texto do botão tem 4,5:1 sobre o fundo dele', ({ tokens }) => {
+    const body = ruleBody(cena, '.cena-pausa')
+    const all = { ...tokens, ...sceneTokens }
+    const text = resolveColor(`var(${tokenUsed(body, 'color')})`, all)
+    const background = resolveColor(`var(${tokenUsed(body, 'background')})`, all)
+
+    expect(contrast(text, background)).toBeGreaterThanOrEqual(4.5)
+  })
+})

@@ -45,6 +45,31 @@
   margin: 0;
 }
 
+/* Botão de pausa (WCAG 2.2.2): a cena anda sem parar, então a pessoa precisa poder parar. */
+.cena-pausa {
+  min-height: 2.75rem;
+  margin-top: 0.75rem;
+  padding: 0 1rem;
+  border: 1px solid var(--quadro-mudo);
+  border-radius: 0.5rem;
+  background: var(--superficie);
+  color: var(--tinta);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color var(--dur-rapida) var(--curva);
+}
+
+.cena-pausa[aria-pressed='true'] {
+  border-color: var(--tinta);
+  background: var(--papel-2);
+}
+
+@media (hover: hover) {
+  .cena-pausa:hover {
+    background: color-mix(in srgb, var(--tinta) 8%, var(--superficie));
+  }
+}
+
 .cena-astro {
   position: absolute;
   top: 1.25rem;
@@ -238,6 +263,14 @@
   fill: var(--quadro-texto);
 }
 
+/* Pausada pelo botão: as animações congelam onde estão, sem sumir nem recomeçar. */
+.cena[data-pausada] .cena-camada,
+.cena[data-pausada] .cena-faixa,
+.cena[data-pausada] .cena-carroceria,
+.cena[data-pausada] .cena-roda {
+  animation-play-state: paused;
+}
+
 @keyframes cena-anda {
   to {
     transform: translate3d(calc(var(--cena-passo) * -1), 0, 0);
@@ -260,10 +293,11 @@
   }
 }
 
-/* No celular o ônibus encolhe, o astro some e a faixa ganha altura para o título quebrar em duas linhas. */
+/* No celular o ônibus encolhe, o astro some e a faixa ganha altura: o título quebra em duas linhas
+   e o botão de pausa, logo abaixo, não encosta no ônibus. */
 @media (max-width: 40rem) {
   .cena {
-    min-height: 13rem;
+    min-height: 15rem;
   }
 
   .cena-astro {

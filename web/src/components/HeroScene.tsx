@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { useReducedMotion } from '../motion/useReducedMotion'
 
 // Cada camada é feita de dois blocos iguais lado a lado. Ela anda exatamente a largura de um bloco
 // e recomeça, então o laço não tem salto. Nenhuma cor mora aqui: tudo vem de cena.css (tokens).
@@ -146,8 +147,11 @@ interface HeroSceneProps {
 
 /** Faixa de título com um ônibus viajando por uma estrada; o fundo é só enfeite (aria-hidden). */
 function HeroScene({ title }: HeroSceneProps) {
+  const reduced = useReducedMotion()
+  const [paused, setPaused] = useState(false)
+
   return (
-    <div className="cena" data-cena>
+    <div className="cena" data-cena data-pausada={paused ? '' : undefined}>
       <div className="cena-fundo" aria-hidden="true">
         <span className="cena-astro" />
         <Layer name="montanha" height={MOUNTAINS_HEIGHT}>
@@ -193,6 +197,16 @@ function HeroScene({ title }: HeroSceneProps) {
       </div>
       <div className="cena-conteudo">
         <h1>{title}</h1>
+        {reduced ? null : (
+          <button
+            type="button"
+            className="cena-pausa"
+            aria-pressed={paused}
+            onClick={() => setPaused((current) => !current)}
+          >
+            Pausar animação
+          </button>
+        )}
       </div>
     </div>
   )
