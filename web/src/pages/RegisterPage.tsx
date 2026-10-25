@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { ApiRequestError } from '../api/client'
 import { register } from '../auth/authApi'
@@ -37,6 +37,13 @@ function RegisterPage() {
   const [formError, setFormError] = useState<string | null>(null)
   // O estado só muda na próxima renderização; o ref bloqueia um segundo envio no mesmo instante.
   const sending = useRef(false)
+  const formRef = useRef<HTMLFormElement>(null)
+
+  // Depois que os erros aparecem na tela, o foco vai ao primeiro campo inválido (ordem do DOM).
+  // Cada falha cria um objeto novo, então uma segunda tentativa também leva o foco de volta.
+  useEffect(() => {
+    formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
+  }, [fieldErrors])
 
   function stopSending() {
     setSubmitting(false)
@@ -89,7 +96,7 @@ function RegisterPage() {
   return (
     <section>
       <h1>Criar conta</h1>
-      <form className="formulario" onSubmit={handleSubmit}>
+      <form ref={formRef} className="formulario" onSubmit={handleSubmit}>
         <Field
           label="Nome"
           type="text"

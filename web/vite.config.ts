@@ -11,5 +11,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
+    // O Vitest troca todo CSS por texto vazio; só o rodoviaria.css é lido de verdade,
+    // para o teste de contraste conseguir ler os tokens de cor.
+    css: { include: [/rodoviaria\.css/] },
   },
 })

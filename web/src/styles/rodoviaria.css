@@ -167,7 +167,7 @@ h1 {
   width: 44px;
   height: 44px;
   padding: 0;
-  border: 1px solid var(--quadro-linha);
+  border: 1px solid var(--quadro-mudo);
   border-radius: 0.5rem;
   background: transparent;
   color: inherit;
