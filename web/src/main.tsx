@@ -10,6 +10,7 @@ import { AuthProvider } from './auth/AuthProvider.tsx'
 import './styles/rodoviaria.css'
 import './styles/busca.css'
 import './styles/conta.css'
+import './styles/holo.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

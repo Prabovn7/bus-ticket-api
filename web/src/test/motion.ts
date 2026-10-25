@@ -25,3 +25,16 @@ export function mockMotionPreference(reduce: boolean) {
     },
   }
 }
+
+/** Simula várias consultas de mídia de uma vez: `{ '(hover: none)': true }`. As demais dão false. */
+export function mockMediaQueries(matches: Record<string, boolean>) {
+  return vi.spyOn(window, 'matchMedia').mockImplementation(
+    (query: string) =>
+      ({
+        matches: matches[query] ?? false,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }) as unknown as MediaQueryList,
+  )
+}
