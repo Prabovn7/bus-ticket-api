@@ -11,7 +11,9 @@
   --my: 50;
 
   position: relative;
+  margin-bottom: 1.5rem;
   padding: 1rem;
+  border: 1px solid var(--quadro-linha);
   border-radius: 0.75rem;
   background: var(--quadro);
   color: var(--quadro-texto);
@@ -44,4 +46,8 @@
 
 .holo-conteudo {
   position: relative;
+}
+
+.holo-conteudo p {
+  margin: 0;
 }

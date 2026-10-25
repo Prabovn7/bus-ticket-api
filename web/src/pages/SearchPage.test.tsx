@@ -204,3 +204,79 @@ describe('SearchPage', () => {
     expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument()
   })
 })
+
+// O HoloCard só pode ficar em área de leitura: nunca dentro de controles, dos resultados ou de avisos de erro.
+const FORBIDDEN_AROUND_NOTICE =
+  'form, table, ul, ol, [role="alert"], [role="status"], .quadro, .resultado'
+
+function expectOneSafeNotice(container: HTMLElement) {
+  const cards = container.querySelectorAll('[data-holo]')
+  expect(cards).toHaveLength(1)
+  expect(cards[0].closest(FORBIDDEN_AROUND_NOTICE)).toBeNull()
+}
+
+describe('SearchPage: aviso de pagamentos simulados', () => {
+  it('diz que os pagamentos são simulados e que nada é cobrado', async () => {
+    stubApi(() => Promise.resolve(jsonResponse([])))
+    render(<SearchPage />)
+    await waitForCities()
+
+    expect(screen.getByText(/pagamentos simulados/i)).toBeInTheDocument()
+    expect(screen.getByText(/nada é cobrado/i)).toBeInTheDocument()
+  })
+
+  it('aparece antes de as cidades carregarem, em área segura', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => {})),
+    )
+    const { container } = render(<SearchPage />)
+
+    expectOneSafeNotice(container)
+  })
+
+  it('continua aparecendo, em área segura, se as cidades não carregam', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))),
+    )
+    const { container } = render(<SearchPage />)
+    await screen.findByRole('alert')
+
+    expectOneSafeNotice(container)
+  })
+
+  it('continua aparecendo, em área segura, com os resultados no quadro', async () => {
+    stubApi(() => Promise.resolve(jsonResponse([morningTrip, nightTrip])))
+    const user = userEvent.setup()
+    const { container } = render(<SearchPage />)
+    await search(user, saoPauloToUberaba)
+    await screen.findByRole('table')
+
+    expectOneSafeNotice(container)
+  })
+
+  it('continua aparecendo, em área segura, quando a busca dá erro', async () => {
+    stubApi(() => Promise.resolve(jsonResponse([])))
+    const user = userEvent.setup()
+    const { container } = render(<SearchPage />)
+    await search(user, { ...saoPauloToUberaba, destination: 'São Paulo (SP)' })
+    await screen.findByRole('alert')
+
+    expectOneSafeNotice(container)
+  })
+
+  it('uma nova busca não remonta o aviso', async () => {
+    stubApi(() => Promise.resolve(jsonResponse([morningTrip])))
+    const user = userEvent.setup()
+    const { container } = render(<SearchPage />)
+    await waitForCities()
+    const before = container.querySelector('[data-holo]')
+
+    await search(user, saoPauloToUberaba)
+    await screen.findByRole('table')
+
+    expect(before).not.toBeNull()
+    expect(container.querySelector('[data-holo]')).toBe(before)
+  })
+})

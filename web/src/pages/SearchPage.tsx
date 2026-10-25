@@ -3,6 +3,7 @@ import { listCities } from '../api/catalog'
 import { ApiRequestError } from '../api/client'
 import type { City } from '../api/types'
 import BoardState from '../components/BoardState'
+import HoloCard from '../components/HoloCard'
 import SearchForm, { type SearchValues } from '../components/SearchForm'
 import TripBoard from '../components/TripBoard'
 import { useSearchTrips } from '../hooks/useSearchTrips'
@@ -110,6 +111,12 @@ function SearchPage() {
   return (
     <section>
       <h1>Para onde você vai?</h1>
+
+      <HoloCard>
+        <p>
+          <strong>Pagamentos simulados.</strong> Nada é cobrado nesta demonstração.
+        </p>
+      </HoloCard>
 
       {citiesState.status === 'loading' && <p role="status">Carregando cidades</p>}
 
