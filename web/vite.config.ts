@@ -13,6 +13,6 @@ export default defineConfig({
     setupFiles: './src/test/setup.ts',
     // O Vitest troca todo CSS por texto vazio; só os CSS lidos por testes de contraste são processados de verdade,
     // para o teste de contraste conseguir ler os tokens de cor.
-    css: { include: [/(rodoviaria|holo)\.css/] },
+    css: { include: [/(rodoviaria|holo|cena)\.css/] },
   },
 })

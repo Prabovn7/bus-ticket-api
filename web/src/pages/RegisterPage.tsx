@@ -5,6 +5,7 @@ import { register } from '../auth/authApi'
 import { useAuth } from '../auth/useAuth'
 import ErrorMessage from '../components/ErrorMessage'
 import Field from '../components/Field'
+import HeroScene from '../components/HeroScene'
 
 const MIN_PASSWORD_LENGTH = 8
 
@@ -95,7 +96,7 @@ function RegisterPage() {
 
   return (
     <section>
-      <h1>Criar conta</h1>
+      <HeroScene title="Criar conta" />
       <form ref={formRef} className="formulario" onSubmit={handleSubmit}>
         <Field
           label="Nome"

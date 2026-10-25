@@ -11,6 +11,7 @@ import './styles/rodoviaria.css'
 import './styles/busca.css'
 import './styles/conta.css'
 import './styles/holo.css'
+import './styles/cena.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

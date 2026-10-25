@@ -67,3 +67,38 @@ export function blend(base: string, top: string, alpha: number): string {
   )
   return `#${mixed.map((value) => value.toString(16).padStart(2, '0')).join('')}`
 }
+
+/** Todas as declarações `--nome: valor;` do corpo de uma regra, com o valor como texto. */
+export function declarationsOf(body: string): Tokens {
+  const declarations: Tokens = {}
+  for (const [, name, value] of body.matchAll(/(--[\w-]+):\s*([^;]+);/g)) {
+    declarations[name] = value.trim()
+  }
+  return declarations
+}
+
+/** Resolve `#hex`, `var(--token)` e `color-mix(in srgb, A p%, B)` até uma cor em hexadecimal. */
+export function resolveColor(value: string, tokens: Tokens): string {
+  const text = value.trim()
+  if (/^#[0-9a-fA-F]{6}$/.test(text)) {
+    return text
+  }
+  const reference = text.match(/^var\((--[\w-]+)\)$/)
+  if (reference) {
+    const next = tokens[reference[1]]
+    if (next === undefined) {
+      throw new Error(`Token sem valor: ${reference[1]}`)
+    }
+    return resolveColor(next, tokens)
+  }
+  const mix = text.match(/^color-mix\(in srgb,\s*(.+?)\s+(\d+(?:\.\d+)?)%\s*,\s*(.+)\)$/)
+  if (mix) {
+    const [, first, percent, second] = mix
+    return blend(
+      resolveColor(first, tokens),
+      resolveColor(second, tokens),
+      1 - Number(percent) / 100,
+    )
+  }
+  throw new Error(`Cor não suportada pelo teste: ${text}`)
+}

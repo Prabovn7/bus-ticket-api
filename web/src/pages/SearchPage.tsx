@@ -8,6 +8,7 @@ import SearchForm, { type SearchValues } from '../components/SearchForm'
 import TripBoard from '../components/TripBoard'
 import { useSearchTrips } from '../hooks/useSearchTrips'
 import { todayInSaoPaulo } from '../lib/formatting'
+import HeroScene from '../components/HeroScene'
 
 const SAME_CITY_MESSAGE = 'Escolha cidades diferentes para origem e destino.'
 
@@ -110,7 +111,7 @@ function SearchPage() {
 
   return (
     <section>
-      <h1>Para onde você vai?</h1>
+      <HeroScene title="Para onde você vai?" />
 
       <HoloCard>
         <p>

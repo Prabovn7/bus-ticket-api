@@ -4,6 +4,7 @@ import { ApiRequestError } from '../api/client'
 import { useAuth } from '../auth/useAuth'
 import ErrorMessage from '../components/ErrorMessage'
 import Field from '../components/Field'
+import HeroScene from '../components/HeroScene'
 
 function messageFor(error: unknown): string {
   if (error instanceof ApiRequestError) {
@@ -45,7 +46,7 @@ function LoginPage() {
 
   return (
     <section>
-      <h1>Entrar</h1>
+      <HeroScene title="Entrar" />
       <form className="formulario" onSubmit={handleSubmit}>
         <Field
           label="E-mail"
