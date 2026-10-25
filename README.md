@@ -196,3 +196,7 @@ Known gaps in this version, kept here on purpose. Each one is either planned or 
 - [ADR 0003: short access token and rotating refresh token](docs/adr/0003-autenticacao-access-curto-e-refresh.md)
 
 The ADRs are written in Portuguese.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

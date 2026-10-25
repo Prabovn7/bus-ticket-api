@@ -194,3 +194,7 @@ Lacunas conhecidas desta versão, registradas aqui de propósito. Cada uma está
 - [ADR 0001: monólito modular](docs/adr/0001-monolito-modular.md)
 - [ADR 0002: front-end em React e TypeScript](docs/adr/0002-front-react-typescript.md)
 - [ADR 0003: access token curto e refresh token rotativo](docs/adr/0003-autenticacao-access-curto-e-refresh.md)
+
+## Licença
+
+MIT. Veja o [LICENSE](LICENSE).
