@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/img/logo-dark.svg">
+    <img src="docs/img/logo.svg" alt="ônibora" height="72">
+  </picture>
+</p>
+
 # bus-ticket-api
 
 Venda de passagens de ônibus intermunicipais, feita como projeto de portfólio com um objetivo: **dois passageiros nunca podem comprar o mesmo assento no mesmo trecho de uma viagem.** O backend é onde estão os problemas interessantes (concorrência, consistência, idempotência); o front-end em React existe para torná-los visíveis.
