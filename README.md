@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/img/logo-dark.svg">
+    <img src="docs/img/logo.svg" alt="ônibora" height="72">
+  </picture>
+</p>
+
 # bus-ticket-api
 
 Intercity bus ticket sales, built as a portfolio project with one goal: **two passengers must never buy the same seat on the same leg of a trip.** The backend is where the interesting problems live (concurrency, consistency, idempotency); the React front end exists to make them visible.
