@@ -1,5 +1,18 @@
+import { useGSAP } from '@gsap/react'
+import gsap from 'gsap'
+import { useRef } from 'react'
 import type { TripResult } from '../api/types'
 import { formatBRL, formatClock, formatDay, formatDuration, isNextDay } from '../lib/formatting'
+import { useReducedMotion } from '../motion/useReducedMotion'
+import FlapTime from './FlapTime'
+
+gsap.registerPlugin(useGSAP)
+
+// Os dois layouts (tabela e lista do celular) ficam no DOM; cada um entra em até 0,4 s de
+// atraso somado, mais os 0,22 s de cada linha.
+const ROW_SECONDS = 0.22
+const MAX_STAGGER_TOTAL = 0.4
+const MAX_STAGGER_EACH = 0.04
 
 interface TripBoardProps {
   trips: TripResult[]
@@ -17,8 +30,40 @@ function formatSeats(capacity: number): string {
 }
 
 function TripBoard({ trips, origin, destination, date }: TripBoardProps) {
+  const root = useRef<HTMLDivElement>(null)
+  const reduced = useReducedMotion()
+  // Chave das viagens: renderizar de novo os mesmos dados não repete a animação.
+  const tripKey = trips.map((trip) => trip.trip_id).join(',')
+
+  useGSAP(
+    () => {
+      if (reduced || !root.current) {
+        return
+      }
+      for (const selector of ['tbody tr', 'ul > li']) {
+        const rows = gsap.utils.toArray<HTMLElement>(selector, root.current)
+        if (rows.length === 0) {
+          continue
+        }
+        gsap.fromTo(
+          rows,
+          { opacity: 0, y: 8 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: ROW_SECONDS,
+            ease: 'power2.out',
+            stagger: Math.min(MAX_STAGGER_EACH, MAX_STAGGER_TOTAL / rows.length),
+            clearProps: 'opacity,transform',
+          },
+        )
+      }
+    },
+    { scope: root, dependencies: [tripKey, reduced], revertOnUpdate: true },
+  )
+
   return (
-    <div className="quadro">
+    <div ref={root} className="quadro">
       <table className="tabela-viagens">
         <caption>
           Viagens de {origin} para {destination} em {formatDay(date)}
@@ -35,9 +80,13 @@ function TripBoard({ trips, origin, destination, date }: TripBoardProps) {
         <tbody>
           {trips.map((trip) => (
             <tr key={trip.trip_id}>
-              <td className="hora">{formatClock(trip.departure_at)}</td>
+              <td className="hora">
+                <FlapTime value={formatClock(trip.departure_at)} />
+              </td>
               <td>
-                <span className="hora">{formatClock(trip.arrival_at)}</span>
+                <span className="hora">
+                  <FlapTime value={formatClock(trip.arrival_at)} />
+                </span>
                 {isNextDay(trip.departure_at, trip.arrival_at) && (
                   <small className="dia-seguinte">no dia seguinte</small>
                 )}
@@ -54,9 +103,13 @@ function TripBoard({ trips, origin, destination, date }: TripBoardProps) {
         {trips.map((trip) => (
           <li key={trip.trip_id} className="viagem">
             <div className="viagem-horas">
-              <span className="hora">{formatClock(trip.departure_at)}</span>
+              <span className="hora">
+                <FlapTime value={formatClock(trip.departure_at)} />
+              </span>
               <span>até</span>
-              <span className="hora">{formatClock(trip.arrival_at)}</span>
+              <span className="hora">
+                <FlapTime value={formatClock(trip.arrival_at)} />
+              </span>
             </div>
             {isNextDay(trip.departure_at, trip.arrival_at) && (
               <small className="dia-seguinte">no dia seguinte</small>

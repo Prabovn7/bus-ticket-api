@@ -1,4 +1,5 @@
 import { Link, NavLink } from 'react-router'
+import { useAuth } from '../auth/useAuth'
 import { useTheme } from '../theme/useTheme'
 
 function MoonIcon() {
@@ -20,7 +21,14 @@ function SunIcon() {
 
 function Header() {
   const { effective, toggle } = useTheme()
+  const { status, user, logout } = useAuth()
   const next = effective === 'escuro' ? 'claro' : 'escuro'
+
+  function handleLogout() {
+    logout().catch(() => {
+      // O AuthProvider já deixa a sessão anônima mesmo quando a chamada falha.
+    })
+  }
 
   return (
     <header className="topo">
@@ -32,9 +40,21 @@ function Header() {
           <NavLink to="/" end>
             Buscar
           </NavLink>
-          <NavLink to="/entrar">Entrar</NavLink>
-          <NavLink to="/criar-conta">Criar conta</NavLink>
+          {status === 'anonymous' ? (
+            <>
+              <NavLink to="/entrar">Entrar</NavLink>
+              <NavLink to="/criar-conta">Criar conta</NavLink>
+            </>
+          ) : null}
         </nav>
+        {status === 'authenticated' && user ? (
+          <div className="topo-usuario">
+            <span className="topo-nome">{user.name}</span>
+            <button type="button" className="botao-sair" onClick={handleLogout}>
+              Sair
+            </button>
+          </div>
+        ) : null}
         <button
           type="button"
           className="botao-tema"

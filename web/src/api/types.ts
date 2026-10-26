@@ -17,3 +17,16 @@ export interface ApiError {
   code: string
   message: string
 }
+
+export interface User {
+  id: number
+  email: string
+  name: string
+}
+
+/**Resposta de login e refresh. */
+export interface TokenResponse {
+  access_token: string
+  token_type: string
+  expires_in: number
+}

@@ -2,10 +2,11 @@ import { render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { routes } from './router'
+import { authWrapper, fakeAuth } from './test/auth'
 
 function renderAt(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] })
-  return render(<RouterProvider router={router} />)
+  return render(<RouterProvider router={router} />, { wrapper: authWrapper(fakeAuth()) })
 }
 
 describe('rotas', () => {

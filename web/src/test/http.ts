@@ -28,3 +28,19 @@ export function controllableFetch() {
   vi.stubGlobal('fetch', fetchMock)
   return { fetchMock, calls }
 }
+
+/** Responde por URL, na ordem de cada fila, e anota a URL e o cabeçalho Authorization enviados. */
+export function stubRoutes(routes: Record<string, Response[]>) {
+  const queues = new Map(Object.entries(routes).map(([url, list]) => [url, [...list]]))
+  const seen: { url: string; auth: string | null }[] = []
+
+  const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input)
+    seen.push({ url, auth: new Headers(init?.headers).get('Authorization') })
+    const next = queues.get(url)?.shift()
+    return next ? Promise.resolve(next) : Promise.reject(new Error(`Chamada inesperada: ${url}`))
+  })
+
+  vi.stubGlobal('fetch', fetchMock)
+  return { seen }
+}

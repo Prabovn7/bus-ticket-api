@@ -1,0 +1,53 @@
+/* Efeito holográfico 2D (HoloCard): só variáveis de cor, para qualquer tema.
+   Carregado depois de rodoviaria.css e busca.css (o último vence). */
+
+:root {
+  /* Opacidade máxima do brilho sobre o texto; o teste de contraste lê este valor. */
+  --holo-alfa: 0.22;
+}
+
+.holo {
+  --mx: 50;
+  --my: 50;
+
+  position: relative;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--quadro-linha);
+  border-radius: 0.75rem;
+  background: var(--quadro);
+  color: var(--quadro-texto);
+  isolation: isolate;
+  touch-action: pan-y;
+}
+
+.holo-brilho {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  opacity: var(--holo-alfa);
+  background:
+    radial-gradient(
+      circle at calc(var(--mx) * 1%) calc(var(--my) * 1%),
+      var(--quadro-texto),
+      transparent 55%
+    ),
+    conic-gradient(
+      from calc(var(--mx) * 3.6deg) at 50% 50%,
+      var(--ambar),
+      var(--livre-claro),
+      var(--quadro-mudo),
+      var(--alerta-claro),
+      var(--ambar)
+    );
+  pointer-events: none;
+}
+
+.holo-conteudo {
+  position: relative;
+}
+
+.holo-conteudo p {
+  margin: 0;
+}

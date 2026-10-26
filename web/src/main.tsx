@@ -5,11 +5,18 @@ import '@fontsource/barlow-condensed/700.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
+import { AuthProvider } from './auth/AuthProvider.tsx'
+// A ordem importa: tokens e base primeiro, estilos de tela depois (o último vence).
 import './styles/rodoviaria.css'
 import './styles/busca.css'
+import './styles/conta.css'
+import './styles/holo.css'
+import './styles/cena.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </StrictMode>,
 )

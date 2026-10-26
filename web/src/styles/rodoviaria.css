@@ -132,6 +132,7 @@ h1 {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
+  color: var(--quadro-texto);
   font-family: var(--fonte-titulo);
   font-size: 1.875rem;
   font-weight: 700;
@@ -167,7 +168,7 @@ h1 {
   width: 44px;
   height: 44px;
   padding: 0;
-  border: 1px solid var(--quadro-linha);
+  border: 1px solid var(--quadro-mudo);
   border-radius: 0.5rem;
   background: transparent;
   color: inherit;
@@ -209,12 +210,31 @@ h1 {
   box-shadow: none;
 }
 
+/* O título recebe foco por código ao trocar de tela; não é um controle, então sem anel. */
+h1[tabindex='-1']:focus {
+  outline: none;
+  box-shadow: none;
+}
+
 .rodape {
   padding: 1rem;
   border-top: 1px solid var(--papel-2);
   color: var(--tinta-suave);
   font-size: 0.9375rem;
   text-align: center;
+}
+
+/* Texto só para leitor de tela: sai da vista, mas continua lido. */
+.so-leitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: reduce) {

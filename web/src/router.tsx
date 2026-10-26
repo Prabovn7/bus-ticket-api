@@ -8,9 +8,9 @@ export const routes: RouteObject[] = [
   {
     element: <Layout />,
     children: [
-      { path: '/', element: <SearchPage /> },
-      { path: '/entrar', element: <LoginPage /> },
-      { path: '/criar-conta', element: <RegisterPage /> },
+      { path: '/', element: <SearchPage />, handle: { title: 'Buscar viagens' } },
+      { path: '/entrar', element: <LoginPage />, handle: { title: 'Entrar' } },
+      { path: '/criar-conta', element: <RegisterPage />, handle: { title: 'Criar conta' } },
     ],
   },
 ]

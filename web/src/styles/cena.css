@@ -1,0 +1,321 @@
+/* Cena do hero (HeroScene): faixa de título com um ônibus viajando por uma estrada.
+   Só variáveis de cor, derivadas dos tokens do tema; só transform é animado.
+   Carregado depois de rodoviaria.css e busca.css (o último vence). */
+
+:root {
+  --cena-ceu: var(--papel);
+  --cena-horizonte: color-mix(in srgb, var(--papel) 82%, var(--ambar));
+  --cena-astro: var(--ambar);
+  --cena-montanha: color-mix(in srgb, var(--tinta-suave) 40%, var(--papel));
+  --cena-predio: color-mix(in srgb, var(--tinta-suave) 50%, var(--papel));
+  --cena-janela: color-mix(in srgb, var(--papel) 65%, var(--cena-predio));
+  --cena-arvore: color-mix(in srgb, var(--livre) 75%, var(--papel));
+  --cena-tronco: color-mix(in srgb, var(--tinta-suave) 80%, var(--papel));
+  --cena-frente: color-mix(in srgb, var(--tinta) 65%, var(--papel));
+  --cena-arbusto: color-mix(in srgb, var(--livre) 85%, var(--tinta));
+  --cena-estrada: var(--quadro);
+  --cena-faixa: var(--quadro-texto);
+  --cena-sombra: color-mix(in srgb, var(--tinta) 30%, transparent);
+}
+
+.cena {
+  position: relative;
+  min-height: 12rem;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  border: 1px solid var(--papel-2);
+  border-radius: 0.75rem;
+  background: linear-gradient(var(--cena-ceu), var(--cena-horizonte));
+}
+
+/* Tudo o que é desenho fica atrás do título e nunca recebe clique. */
+.cena-fundo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.cena-conteudo {
+  position: relative;
+  padding: 1.25rem 1rem;
+  color: var(--tinta);
+}
+
+.cena-conteudo h1 {
+  margin: 0;
+}
+
+/* Botão de pausa (WCAG 2.2.2): a cena anda sem parar, então a pessoa precisa poder parar. */
+.cena-pausa {
+  min-height: 2.75rem;
+  margin-top: 0.75rem;
+  padding: 0 1rem;
+  border: 1px solid var(--quadro-mudo);
+  border-radius: 0.5rem;
+  background: var(--superficie);
+  color: var(--tinta);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color var(--dur-rapida) var(--curva);
+}
+
+.cena-pausa[aria-pressed='true'] {
+  border-color: var(--tinta);
+  background: var(--papel-2);
+}
+
+@media (hover: hover) {
+  .cena-pausa:hover {
+    background: color-mix(in srgb, var(--tinta) 8%, var(--superficie));
+  }
+}
+
+.cena-astro {
+  position: absolute;
+  top: 1.25rem;
+  right: 2rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: var(--cena-astro);
+  box-shadow: 0 0 2rem color-mix(in srgb, var(--cena-astro) 55%, transparent);
+}
+
+/* Camadas: cada uma tem dois blocos de 1200 px e anda um bloco inteiro por volta. */
+.cena-camada {
+  --cena-passo: 1200px;
+
+  position: absolute;
+  bottom: 28px;
+  left: 0;
+  display: flex;
+  width: calc(var(--cena-passo) * 2);
+  animation: cena-anda linear infinite;
+  will-change: transform;
+}
+
+.cena-bloco {
+  flex: none;
+}
+
+.cena-montanha {
+  animation-duration: 120s;
+}
+
+.cena-predio {
+  animation-duration: 60s;
+}
+
+.cena-arvore {
+  animation-duration: 30s;
+}
+
+.cena-frente {
+  animation-duration: 14s;
+}
+
+.cena-montanha path {
+  fill: var(--cena-montanha);
+}
+
+.cena-predio rect {
+  fill: var(--cena-predio);
+}
+
+.cena-predio .cena-janelas {
+  fill: var(--cena-janela);
+}
+
+.cena-tronco {
+  fill: var(--cena-tronco);
+}
+
+.cena-copa {
+  fill: var(--cena-arvore);
+}
+
+.cena-frente rect {
+  fill: var(--cena-frente);
+}
+
+.cena-frente .cena-arbusto {
+  fill: var(--cena-arbusto);
+}
+
+.cena-frente .cena-fio {
+  fill: none;
+  stroke: var(--cena-frente);
+  stroke-width: 1.5;
+}
+
+/* Estrada: a faixa tracejada é a coisa mais perto da câmera, então a mais rápida. */
+.cena-estrada {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 30px;
+  overflow: hidden;
+  border-top: 2px solid var(--quadro-linha);
+  background: var(--cena-estrada);
+}
+
+.cena-faixa {
+  --cena-passo: 120px;
+
+  position: absolute;
+  top: 11px;
+  left: 0;
+  width: calc(100% + var(--cena-passo));
+  height: 3px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--cena-faixa) 0 60px,
+    transparent 60px var(--cena-passo)
+  );
+  animation: cena-anda 0.55s linear infinite;
+  will-change: transform;
+}
+
+.cena-onibus {
+  position: absolute;
+  right: 7%;
+  bottom: 6px;
+  width: 300px;
+  height: auto;
+}
+
+.cena-sombra {
+  fill: var(--cena-sombra);
+}
+
+.cena-carroceria {
+  animation: cena-balanca 1.1s ease-in-out infinite alternate;
+}
+
+.cena-corpo {
+  fill: var(--superficie);
+  stroke: var(--tinta);
+  stroke-width: 2;
+}
+
+.cena-faixa-cor {
+  fill: var(--ambar);
+}
+
+.cena-vidro {
+  fill: var(--quadro-2);
+  stroke: var(--tinta);
+  stroke-width: 1;
+}
+
+.cena-porta {
+  fill: var(--quadro-2);
+}
+
+.cena-divisoria,
+.cena-espelho {
+  fill: var(--tinta);
+}
+
+.cena-ar,
+.cena-parachoque {
+  fill: var(--tinta-suave);
+}
+
+.cena-farol {
+  fill: var(--ambar);
+}
+
+.cena-farol-luz {
+  fill: var(--ambar);
+  opacity: 0.22;
+}
+
+.cena-lanterna {
+  fill: var(--alerta);
+}
+
+.cena-cava {
+  fill: var(--cena-estrada);
+}
+
+.cena-roda {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cena-gira 0.4s linear infinite;
+}
+
+.cena-pneu {
+  fill: var(--quadro-2);
+  stroke: var(--quadro-linha);
+  stroke-width: 2;
+}
+
+.cena-raio {
+  fill: none;
+  stroke: var(--quadro-texto);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.cena-aro {
+  fill: var(--quadro-texto);
+}
+
+/* Pausada pelo botão: as animações congelam onde estão, sem sumir nem recomeçar. */
+.cena[data-pausada] .cena-camada,
+.cena[data-pausada] .cena-faixa,
+.cena[data-pausada] .cena-carroceria,
+.cena[data-pausada] .cena-roda {
+  animation-play-state: paused;
+}
+
+@keyframes cena-anda {
+  to {
+    transform: translate3d(calc(var(--cena-passo) * -1), 0, 0);
+  }
+}
+
+@keyframes cena-gira {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes cena-balanca {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-1.5px);
+  }
+}
+
+/* No celular o ônibus encolhe, o astro some e a faixa ganha altura: o título quebra em duas linhas
+   e o botão de pausa, logo abaixo, não encosta no ônibus. */
+@media (max-width: 40rem) {
+  .cena {
+    min-height: 15rem;
+  }
+
+  .cena-astro {
+    display: none;
+  }
+
+  .cena-onibus {
+    right: 4%;
+    width: 210px;
+  }
+}
+
+/* Movimento reduzido: a cena fica parada, com tudo visível. */
+@media (prefers-reduced-motion: reduce) {
+  .cena-camada,
+  .cena-faixa,
+  .cena-carroceria,
+  .cena-roda {
+    animation: none;
+  }
+}
