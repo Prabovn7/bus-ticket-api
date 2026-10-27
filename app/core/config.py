@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     jwt_secret: str = Field(min_length=32)
     jwt_expire_minutes: int = 15
     refresh_expire_hours: int = 24
-    cookie_secure: bool = False
+    cookie_secure: bool = True
 
     @property
     def database_url(self) -> str:

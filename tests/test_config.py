@@ -35,3 +35,15 @@ def test_example_jwt_secret_is_rejected_until_replaced():
             postgres_db="d",
             jwt_secret=example_value("JWT_SECRET"),
         )
+
+
+def test_refresh_cookie_is_secure_by_default():
+    settings = Settings(
+        _env_file=None,
+        postgres_user="u",
+        postgres_password="p",
+        postgres_db="d",
+        jwt_secret="x" * 32,
+    )
+
+    assert settings.cookie_secure is True

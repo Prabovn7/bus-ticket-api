@@ -60,3 +60,10 @@ def client(session):
     app.dependency_overrides[get_session] = lambda: session
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture(autouse=True)
+def insecure_cookies_for_http_tests(monkeypatch):
+    # The test client talks plain http, and cookie jars never send a Secure
+    # cookie back over http. Production keeps the secure default.
+    monkeypatch.setattr(get_settings(), "cookie_secure", False)

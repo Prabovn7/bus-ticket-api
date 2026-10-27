@@ -169,7 +169,7 @@ Lacunas conhecidas desta versão, registradas aqui de propósito. Cada uma está
 - A tabela `refresh_tokens` nunca é limpa.
 - Duas abas do navegador renovando a sessão ao mesmo tempo podem revogar a família inteira de tokens. A renovação única em andamento vale por aba; `navigator.locks` ou um `BroadcastChannel` resolveria.
 - Cadastrar com um e-mail que já existe devolve `409`, o que revela que a conta existe. Aceito por enquanto.
-- `COOKIE_SECURE` vem como `false` por padrão, para o desenvolvimento local. O padrão mudará para `true` no início da Fase 2.
+- `COOKIE_SECURE` vem como `true` por padrão. O `.env.example` usa `false` só para o desenvolvimento local em HTTP puro; mantenha `true` atrás de HTTPS.
 - Um único `JWT_SECRET` assina todos os tokens.
 - Faltam cabeçalhos de segurança e uma Content-Security-Policy, e o script do tema no `index.html` vai precisar de um hash nessa política. Tudo isso pertence ao checklist de pré-deploy.
 

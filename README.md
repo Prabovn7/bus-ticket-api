@@ -169,7 +169,7 @@ Known gaps in this version, kept here on purpose. Each one is either planned or 
 - The `refresh_tokens` table is never cleaned up.
 - Two browser tabs renewing the session at the same moment can revoke the whole token family. The single in-flight renewal is per tab; `navigator.locks` or a `BroadcastChannel` would fix it.
 - Signing up with an existing e-mail returns `409`, which reveals that the account exists. Accepted for now.
-- `COOKIE_SECURE` defaults to `false` for local development. The default will change to `true` at the start of Phase 2.
+- `COOKIE_SECURE` defaults to `true`. `.env.example` sets it to `false` only for local development over plain HTTP; keep it `true` behind HTTPS.
 - A single `JWT_SECRET` signs every token.
 - Security headers and a Content-Security-Policy are missing, and the theme script in `index.html` will need a hash in that policy. All of this belongs to the pre-deploy checklist.
 

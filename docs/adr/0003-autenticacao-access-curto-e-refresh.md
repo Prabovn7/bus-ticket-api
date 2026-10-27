@@ -78,7 +78,7 @@ Duas credenciais, com papéis diferentes:
 - **O cadastro revela se o e-mail já existe** (`409`). O login não revela. A escolha
   foi aceitar isso no cadastro, porque a alternativa (confirmar por e-mail) está fora do
   escopo; o limite de tentativas reduz o abuso.
-- O padrão de `COOKIE_SECURE` é `False`, para o desenvolvimento em HTTP. Em produção
-  precisa ser `True`. A correção prevista é inverter o padrão e deixar o `.env` local
-  com `false`.
+- O padrão de `COOKIE_SECURE` é `True` (era `False` até o início da Fase 2). O
+  `.env.example` traz `false` só para o desenvolvimento em HTTP; os testes desligam
+  a flag por uma fixture, porque o cliente de teste fala HTTP puro.
 - As telas Entrar e Criar conta não redirecionam quem já está autenticado.
