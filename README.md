@@ -192,7 +192,7 @@ Known gaps in this version, kept here on purpose. Each one is either planned or 
 
 **Infrastructure**
 
-- Compose publishes PostgreSQL and Redis on every network interface, Redis has no password, and the images are pinned only by major version. Ports will be bound to `127.0.0.1` at the start of Phase 2.
+- Compose publishes PostgreSQL and Redis on `127.0.0.1` only, so `.env.example` uses `127.0.0.1` instead of `localhost` (on Windows, `localhost` can resolve to IPv6 first and every new connection waits for a timeout). Redis still has no password (planned for Phase 5), and the images are pinned only by major version.
 - The database `engine` is created at import time, and foreign keys have no explicit names.
 - GitHub Actions are pinned by tag, not by hash. `pip-audit` and `npm audit` are not in the pipeline.
 

@@ -192,7 +192,7 @@ Lacunas conhecidas desta versão, registradas aqui de propósito. Cada uma está
 
 **Infraestrutura**
 
-- O Compose publica o PostgreSQL e o Redis em todas as interfaces de rede, o Redis não tem senha e as imagens estão fixadas apenas pela versão principal. As portas passarão a escutar só em `127.0.0.1` no início da Fase 2.
+- O Compose publica o PostgreSQL e o Redis só em `127.0.0.1`, por isso o `.env.example` usa `127.0.0.1` em vez de `localhost` (no Windows, `localhost` pode resolver para IPv6 primeiro e cada nova conexão espera um timeout). O Redis ainda não tem senha (prevista para a Fase 5) e as imagens estão fixadas apenas pela versão principal.
 - O `engine` do banco é criado no momento do import, e as chaves estrangeiras não têm nomes explícitos.
 - As Actions do GitHub estão fixadas por tag, não por hash. `pip-audit` e `npm audit` não fazem parte do pipeline.
 
