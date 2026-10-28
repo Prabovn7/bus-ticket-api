@@ -169,7 +169,7 @@ Known gaps in this version, kept here on purpose. Each one is either planned or 
 - The `refresh_tokens` table is never cleaned up.
 - Two browser tabs renewing the session at the same moment can revoke the whole token family. The single in-flight renewal is per tab; `navigator.locks` or a `BroadcastChannel` would fix it.
 - Signing up with an existing e-mail returns `409`, which reveals that the account exists. Accepted for now.
-- `COOKIE_SECURE` defaults to `false` for local development. The default will change to `true` at the start of Phase 2.
+- `COOKIE_SECURE` defaults to `true`. `.env.example` sets it to `false` only for local development over plain HTTP; keep it `true` behind HTTPS.
 - A single `JWT_SECRET` signs every token.
 - Security headers and a Content-Security-Policy are missing, and the theme script in `index.html` will need a hash in that policy. All of this belongs to the pre-deploy checklist.
 
@@ -192,7 +192,7 @@ Known gaps in this version, kept here on purpose. Each one is either planned or 
 
 **Infrastructure**
 
-- Compose publishes PostgreSQL and Redis on every network interface, Redis has no password, and the images are pinned only by major version. Ports will be bound to `127.0.0.1` at the start of Phase 2.
+- Compose publishes PostgreSQL and Redis on `127.0.0.1` only, so `.env.example` uses `127.0.0.1` instead of `localhost` (on Windows, `localhost` can resolve to IPv6 first and every new connection waits for a timeout). Redis still has no password (planned for Phase 5), and the images are pinned only by major version.
 - The database `engine` is created at import time, and foreign keys have no explicit names.
 - GitHub Actions are pinned by tag, not by hash. `pip-audit` and `npm audit` are not in the pipeline.
 

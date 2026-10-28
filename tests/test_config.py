@@ -35,3 +35,22 @@ def test_example_jwt_secret_is_rejected_until_replaced():
             postgres_db="d",
             jwt_secret=example_value("JWT_SECRET"),
         )
+
+
+def test_refresh_cookie_is_secure_by_default():
+    settings = Settings(
+        _env_file=None,
+        postgres_user="u",
+        postgres_password="p",
+        postgres_db="d",
+        jwt_secret="x" * 32,
+    )
+
+    assert settings.cookie_secure is True
+
+
+def test_example_env_uses_the_ipv4_loopback():
+    # Compose publishes ports on 127.0.0.1 only, and "localhost" may resolve
+    # to ::1 first, which makes every new connection wait for a timeout.
+    assert example_value("POSTGRES_HOST") == "127.0.0.1"
+    assert example_value("REDIS_URL") == "redis://127.0.0.1:6379/0"
