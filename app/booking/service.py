@@ -1,11 +1,11 @@
 from datetime import timedelta
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.booking.legs import legs_for
-from app.booking.models import Reservation, SeatLeg
+from app.booking.models import Reservation, ReservationStatus, SeatLeg
 from app.catalog.models import RouteStop, Trip
 from app.core.clock import Clock
 from app.core.errors import InvalidSeat, SeatUnavailable, TripNotFound
@@ -75,3 +75,35 @@ def hold_seat(
 
     session.commit()
     return reservation
+
+
+def expire_holds(session: Session, clock: Clock, batch_size: int = 100) -> int:
+    """Mark overdue holds as expired and free their legs. Returns how many expired.
+
+    FOR UPDATE SKIP LOCKED lets several expirers run at once: each one takes the
+    overdue reservations nobody else holds, instead of waiting for them. Paid
+    reservations never match, and a leg is deleted only if it still belongs to the
+    reservation being expired, so a buyer who already took the seat over keeps it.
+    """
+    now = clock.now()
+    reservation_ids = list(
+        session.scalars(
+            select(Reservation.id)
+            .where(Reservation.status == ReservationStatus.HELD, Reservation.expires_at < now)
+            .order_by(Reservation.id)
+            .limit(batch_size)
+            .with_for_update(skip_locked=True)
+        )
+    )
+    if not reservation_ids:
+        session.rollback()
+        return 0
+
+    session.execute(delete(SeatLeg).where(SeatLeg.reservation_id.in_(reservation_ids)))
+    session.execute(
+        update(Reservation)
+        .where(Reservation.id.in_(reservation_ids))
+        .values(status=ReservationStatus.EXPIRED)
+    )
+    session.commit()
+    return len(reservation_ids)
