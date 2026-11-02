@@ -30,3 +30,11 @@ class SeatMapOut(BaseModel):
     trip_id: int
     capacity: int
     seats: list[SeatOut]
+
+
+class TripAvailabilityOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    trip_id: int
+    capacity: int
+    free: int

@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import NamedTuple
 
-from sqlalchemy import and_, delete, func, select, update
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -153,3 +153,45 @@ def seat_statuses(session: Session, clock: Clock, trip_id: int) -> list[SeatStat
             status = "free"
         result.append(SeatStatus(seat_number, status))
     return result
+
+
+class TripAvailability(NamedTuple):
+    trip_id: int
+    capacity: int
+    free: int
+
+
+def free_seat_counts(session: Session, clock: Clock, trip_ids: list[int]) -> list[TripAvailability]:
+    """How many seats are free on each of the given trips, in one query.
+
+    A seat is busy when it has a paid leg or a hold that is not over yet (the same
+    rule as seat_statuses), and it counts once however many legs it occupies.
+    Unknown trips are left out, so one stale id never breaks the others.
+    """
+    ids = sorted(set(trip_ids))
+    if not ids:
+        return []
+
+    now = clock.now()
+    busy = (
+        select(
+            SeatLeg.trip_id,
+            func.count(SeatLeg.seat_number.distinct()).label("busy_seats"),
+        )
+        .where(
+            SeatLeg.trip_id.in_(ids),
+            or_(SeatLeg.expires_at.is_(None), SeatLeg.expires_at >= now),
+        )
+        .group_by(SeatLeg.trip_id)
+        .subquery()
+    )
+    rows = session.execute(
+        select(Trip.id, Trip.capacity, func.coalesce(busy.c.busy_seats, 0))
+        .outerjoin(busy, busy.c.trip_id == Trip.id)
+        .where(Trip.id.in_(ids))
+        .order_by(Trip.id)
+    )
+    return [
+        TripAvailability(trip_id, capacity, capacity - busy_seats)
+        for trip_id, capacity, busy_seats in rows
+    ]
