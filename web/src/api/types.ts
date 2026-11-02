@@ -44,3 +44,10 @@ export interface SeatMap {
   capacity: number
   seats: Seat[]
 }
+
+/** Um item de GET /api/trips/availability: quantos assentos estão livres agora. */
+export interface TripAvailability {
+  trip_id: number
+  capacity: number
+  free: number
+}

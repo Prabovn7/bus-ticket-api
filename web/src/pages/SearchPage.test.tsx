@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent, { type UserEvent } from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { City, TripResult } from '../api/types'
@@ -33,10 +33,22 @@ const nightTrip: TripResult = {
   capacity: 40,
 }
 
-function stubApi(tripsResponse: () => Promise<Response>) {
+/** Consulta de assentos livres: todas as viagens pedidas, com todos os lugares livres. */
+function allFree(ids: number[]) {
+  return Promise.resolve(jsonResponse(ids.map((id) => ({ trip_id: id, capacity: 40, free: 40 }))))
+}
+
+function stubApi(
+  tripsResponse: () => Promise<Response>,
+  availabilityResponse: (ids: number[]) => Promise<Response> = allFree,
+) {
   const fetchMock = vi.fn((input: RequestInfo | URL) => {
     const url = String(input)
     if (url === '/api/cities') return Promise.resolve(jsonResponse(cities))
+    if (url.startsWith('/api/trips/availability')) {
+      const ids = new URL(url, 'http://localhost').searchParams.getAll('trip_ids').map(Number)
+      return availabilityResponse(ids)
+    }
     if (url.startsWith('/api/trips')) return tripsResponse()
     return Promise.reject(new Error(`URL inesperada: ${url}`))
   })
@@ -47,7 +59,13 @@ function stubApi(tripsResponse: () => Promise<Response>) {
 function tripCalls(fetchMock: ReturnType<typeof stubApi>) {
   return fetchMock.mock.calls
     .map(([input]) => String(input))
-    .filter((url) => url.startsWith('/api/trips'))
+    .filter((url) => url.startsWith('/api/trips?'))
+}
+
+function availabilityCalls(fetchMock: ReturnType<typeof stubApi>) {
+  return fetchMock.mock.calls
+    .map(([input]) => String(input))
+    .filter((url) => url.startsWith('/api/trips/availability'))
 }
 
 async function waitForCities() {
@@ -94,7 +112,7 @@ describe('SearchPage', () => {
     expect(board.getByText('14:30')).toBeInTheDocument()
     expect(board.getAllByText('6h30')).toHaveLength(2)
     expect(board.getAllByText('R$ 145,00')).toHaveLength(2)
-    expect(board.getAllByText('40 livres')).toHaveLength(2)
+    expect(await board.findAllByText('40 livres')).toHaveLength(2)
 
     const list = screen.getByRole('list', { name: 'Viagens disponíveis' })
     expect(within(list).getAllByRole('listitem')).toHaveLength(2)
@@ -279,5 +297,84 @@ describe('SearchPage: aviso de pagamentos simulados', () => {
 
     expect(before).not.toBeNull()
     expect(container.querySelector('[data-holo]')).toBe(before)
+  })
+})
+
+describe('SearchPage: assentos livres', () => {
+  it('mostra quantos assentos livres há em cada viagem, e não a capacidade', async () => {
+    const fetchMock = stubApi(
+      () => Promise.resolve(jsonResponse([morningTrip, nightTrip])),
+      () =>
+        Promise.resolve(
+          jsonResponse([
+            { trip_id: 1, capacity: 40, free: 37 },
+            { trip_id: 2, capacity: 40, free: 1 },
+          ]),
+        ),
+    )
+    const user = userEvent.setup()
+    render(<SearchPage />)
+    await search(user, saoPauloToUberaba)
+
+    const board = within(await screen.findByRole('table'))
+
+    expect(await board.findByText('37 livres')).toBeInTheDocument()
+    expect(board.getByText('1 livre')).toBeInTheDocument()
+    expect(availabilityCalls(fetchMock)).toEqual(['/api/trips/availability?trip_ids=1&trip_ids=2'])
+  })
+
+  it('enquanto os livres não chegam, mostra os lugares totais sem dizer "livres"', async () => {
+    stubApi(
+      () => Promise.resolve(jsonResponse([morningTrip])),
+      () => new Promise<Response>(() => {}),
+    )
+    const user = userEvent.setup()
+    render(<SearchPage />)
+    await search(user, saoPauloToUberaba)
+
+    const board = within(await screen.findByRole('table'))
+
+    expect(board.getByText('40 lugares')).toBeInTheDocument()
+    expect(board.queryByText(/livre/)).toBeNull()
+  })
+
+  it('se a consulta de livres falha, o quadro continua, com os lugares totais', async () => {
+    const fetchMock = stubApi(
+      () => Promise.resolve(jsonResponse([morningTrip])),
+      () => Promise.resolve(jsonResponse({ code: 'unknown', message: 'Falha.' }, 500)),
+    )
+    const user = userEvent.setup()
+    render(<SearchPage />)
+    await search(user, saoPauloToUberaba)
+    await screen.findByRole('table')
+    await waitFor(() => expect(availabilityCalls(fetchMock)).toHaveLength(1))
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(within(screen.getByRole('table')).getByText('40 lugares')).toBeInTheDocument()
+  })
+
+  it('buscar de novo as mesmas viagens consulta os livres de novo', async () => {
+    let calls = 0
+    const fetchMock = stubApi(
+      () => Promise.resolve(jsonResponse([morningTrip])),
+      () => {
+        calls += 1
+        return Promise.resolve(
+          jsonResponse([{ trip_id: 1, capacity: 40, free: calls === 1 ? 37 : 30 }]),
+        )
+      },
+    )
+    const user = userEvent.setup()
+    render(<SearchPage />)
+    await search(user, saoPauloToUberaba)
+    expect(await screen.findAllByText('37 livres')).toHaveLength(2)
+
+    await user.click(screen.getByRole('button', { name: 'Buscar viagens' }))
+
+    expect(await screen.findAllByText('30 livres')).toHaveLength(2)
+    expect(availabilityCalls(fetchMock)).toHaveLength(2)
   })
 })
