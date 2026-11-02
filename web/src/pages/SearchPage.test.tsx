@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent, { type UserEvent } from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { City, TripResult } from '../api/types'
 import { todayInSaoPaulo } from '../lib/formatting'
 import { jsonResponse } from '../test/http'
+import { render } from '../test/render'
 import SearchPage from './SearchPage'
 
 // Na mesma ordem em que a API devolve (alfabética).

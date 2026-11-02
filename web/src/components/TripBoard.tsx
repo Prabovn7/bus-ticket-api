@@ -1,6 +1,7 @@
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { useRef } from 'react'
+import { Link } from 'react-router'
 import type { TripResult } from '../api/types'
 import { formatBRL, formatClock, formatDay, formatDuration, isNextDay } from '../lib/formatting'
 import { useReducedMotion } from '../motion/useReducedMotion'
@@ -27,6 +28,10 @@ function minutesBetween(startIso: string, endIso: string): number {
 
 function formatSeats(capacity: number): string {
   return `${capacity} ${capacity === 1 ? 'livre' : 'livres'}`
+}
+
+function seatLinkLabel(trip: TripResult): string {
+  return `Escolher assento na viagem das ${formatClock(trip.departure_at)}`
 }
 
 function TripBoard({ trips, origin, destination, date }: TripBoardProps) {
@@ -75,6 +80,9 @@ function TripBoard({ trips, origin, destination, date }: TripBoardProps) {
             <th scope="col">Duração</th>
             <th scope="col">Lugares</th>
             <th scope="col">Preço</th>
+            <th scope="col">
+              <span className="so-leitor">Assento</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -94,6 +102,15 @@ function TripBoard({ trips, origin, destination, date }: TripBoardProps) {
               <td>{formatDuration(minutesBetween(trip.departure_at, trip.arrival_at))}</td>
               <td>{formatSeats(trip.capacity)}</td>
               <td className="preco">{formatBRL(trip.price_cents)}</td>
+              <td>
+                <Link
+                  className="botao botao-quadro"
+                  to={`/viagens/${trip.trip_id}`}
+                  aria-label={seatLinkLabel(trip)}
+                >
+                  Escolher assento
+                </Link>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -119,6 +136,13 @@ function TripBoard({ trips, origin, destination, date }: TripBoardProps) {
               <span>{formatSeats(trip.capacity)}</span>
               <strong className="preco">{formatBRL(trip.price_cents)}</strong>
             </div>
+            <Link
+              className="botao botao-quadro"
+              to={`/viagens/${trip.trip_id}`}
+              aria-label={seatLinkLabel(trip)}
+            >
+              Escolher assento
+            </Link>
           </li>
         ))}
       </ul>
