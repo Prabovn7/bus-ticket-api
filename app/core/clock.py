@@ -9,3 +9,7 @@ class Clock(Protocol):
 class SystemClock:
     def now(self) -> datetime:
         return datetime.now(UTC)
+
+
+def get_clock() -> Clock:
+    return SystemClock()
