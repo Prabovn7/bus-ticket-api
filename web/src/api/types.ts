@@ -51,3 +51,16 @@ export interface TripAvailability {
   capacity: number
   free: number
 }
+
+/** Resposta de POST /api/trips/{id}/holds: o assento fica seu até expirar. */
+export interface Hold {
+  id: number
+  trip_id: number
+  seat_number: number
+  origin_position: number
+  destination_position: number
+  status: string
+  price_cents: number
+  expires_at: string // ISO 8601, em UTC
+  expires_in_seconds: number // segundos que faltam, pelo relógio do servidor
+}
