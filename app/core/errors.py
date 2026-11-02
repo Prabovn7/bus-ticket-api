@@ -33,6 +33,24 @@ class EmailAlreadyRegistered(DomainError):
     message = "Este e-mail já está cadastrado."
 
 
+class TripNotFound(DomainError):
+    status_code = 404
+    code = "trip_not_found"
+    message = "Viagem não encontrada."
+
+
+class InvalidSeat(DomainError):
+    status_code = 422
+    code = "invalid_seat"
+    message = "Este assento não existe nesta viagem."
+
+
+class SeatUnavailable(DomainError):
+    status_code = 409
+    code = "seat_unavailable"
+    message = "Este assento não está mais disponível."
+
+
 class Unauthorized(DomainError):
     status_code = 401
     headers = {"WWW-Authenticate": "Bearer"}
