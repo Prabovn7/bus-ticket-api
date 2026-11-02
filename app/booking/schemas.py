@@ -19,6 +19,7 @@ class ReservationOut(BaseModel):
     status: str
     price_cents: int
     expires_at: datetime
+    expires_in_seconds: int
 
 
 class SeatOut(BaseModel):

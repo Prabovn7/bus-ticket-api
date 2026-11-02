@@ -1,8 +1,10 @@
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
 from app.booking import service
+from app.booking.models import Reservation
 from app.booking.schemas import (
     HoldIn,
     ReservationOut,
@@ -18,11 +20,28 @@ router = APIRouter(prefix="/api", tags=["booking"])
 ClockDep = Annotated[Clock, Depends(get_clock)]
 
 
+def _hold_out(reservation: Reservation, now: datetime) -> ReservationOut:
+    # floor: nunca prometer mais tempo do que existe; mínimo 0
+    seconds_left = max(0, int((reservation.expires_at - now).total_seconds()))
+    return ReservationOut(
+        id=reservation.id,
+        trip_id=reservation.trip_id,
+        seat_number=reservation.seat_number,
+        origin_position=reservation.origin_position,
+        destination_position=reservation.destination_position,
+        status=reservation.status,
+        price_cents=reservation.price_cents,
+        expires_at=reservation.expires_at,
+        expires_in_seconds=seconds_left,
+    )
+
+
 @router.post("/trips/{trip_id}/holds", response_model=ReservationOut, status_code=201)
 def create_hold(
     trip_id: int, body: HoldIn, session: SessionDep, user: CurrentUser, clock: ClockDep
 ):
-    return service.hold_seat(session, clock, user.id, trip_id, body.seat_number)
+    reservation = service.hold_seat(session, clock, user.id, trip_id, body.seat_number)
+    return _hold_out(reservation, clock.now())
 
 
 @router.get("/trips/availability", response_model=list[TripAvailabilityOut])
