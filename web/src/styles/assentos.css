@@ -1,0 +1,125 @@
+/* Grade de assentos 2 + corredor + 2. Só tokens de cor; sem animação. */
+
+.assentos {
+  --foco: var(--quadro-texto);
+  min-width: 0;
+  margin: 0 0 1rem;
+  padding: 1rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: var(--quadro);
+  color: var(--quadro-texto);
+}
+
+.assentos legend {
+  padding: 0;
+  margin-bottom: 0.75rem;
+  font-family: var(--fonte-titulo);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.assentos-grade {
+  display: grid;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.fileira {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.corredor {
+  width: 1.75rem;
+  flex: none;
+}
+
+.assento {
+  position: relative;
+  display: block;
+}
+
+.assento input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.assento input:disabled {
+  cursor: not-allowed;
+}
+
+.assento-caixa {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-width: 2px;
+  border-style: solid;
+  border-radius: 0.5rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.assento-marca {
+  min-height: 0.75rem;
+  font-size: 0.75rem;
+}
+
+.assento[data-estado='livre'] .assento-caixa {
+  background: var(--quadro-2);
+  color: var(--quadro-texto);
+  border-color: var(--livre-claro);
+}
+
+.assento[data-estado='selecionado'] .assento-caixa {
+  background: var(--ambar);
+  color: var(--sobre-ambar);
+  border-color: var(--ambar);
+}
+
+.assento[data-estado='reservado'] .assento-caixa {
+  background: var(--quadro);
+  color: var(--quadro-mudo);
+  border-color: var(--quadro-mudo);
+  border-style: dashed;
+}
+
+.assento[data-estado='ocupado'] .assento-caixa {
+  background: var(--quadro);
+  color: var(--quadro-mudo);
+  border-color: var(--quadro-linha);
+  border-style: solid;
+}
+
+.assento input:focus-visible + .assento-caixa {
+  outline: 3px solid var(--foco);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .assento input:not(:disabled):hover + .assento-caixa {
+    border-color: var(--ambar);
+  }
+}
+
+.assentos-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--quadro-mudo);
+  font-size: 0.9375rem;
+}

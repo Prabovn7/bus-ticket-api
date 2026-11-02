@@ -12,6 +12,7 @@ import './styles/busca.css'
 import './styles/conta.css'
 import './styles/holo.css'
 import './styles/cena.css'
+import './styles/assentos.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
