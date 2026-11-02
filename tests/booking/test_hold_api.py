@@ -44,6 +44,13 @@ def test_hold_returns_201_with_the_reservation(client, clock, trip, headers):
     assert datetime.fromisoformat(body["expires_at"]) == clock.now() + timedelta(minutes=10)
 
 
+def test_hold_returns_the_seconds_left_on_the_server_clock(client, clock, trip, headers):
+    response = hold(client, trip, headers)
+
+    assert response.status_code == 201
+    assert response.json()["expires_in_seconds"] == 600
+
+
 def test_hold_requires_login(client, session, trip):
     response = hold(client, trip)
 

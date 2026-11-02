@@ -11,7 +11,7 @@ Venda de passagens de ônibus intermunicipais, feita como projeto de portfólio 
 
 English: [README.md](README.md)
 
-> **Status:** Fase 1 de 6 (`v0.1.0`). Catálogo, busca de viagens, contas com login JWT e front-end em React estão prontos. Reserva temporária de assento, pagamentos e mapa de assentos em tempo real vêm nas próximas fases. Veja o [roadmap](#roadmap).
+> **Status:** Fase 2 de 6 (`v0.2.0`). Catálogo, busca de viagens, contas com login JWT, front-end em React e reserva temporária de assento (10 minutos) estão prontos. Pagamentos, reserva por trecho e mapa de assentos em tempo real vêm nas próximas fases. Veja o [roadmap](#roadmap).
 
 ## Capturas de tela
 
@@ -28,6 +28,8 @@ O front-end se chama **Ônibora**. Ele segue o tema do sistema e tem um botão p
 - **Busca de viagens** por origem, destino e data. O preço de uma viagem é a soma dos preços de cada trecho entre as duas cidades.
 - **Contas**: cadastro (com login automático em seguida), entrar, sair e sessão restaurada ao recarregar a página.
 - **Autenticação** com access token de vida curta e refresh token rotativo ([ADR 0003](docs/adr/0003-autenticacao-access-curto-e-refresh.md)).
+- **Reserva temporária de assento (hold)**: o passageiro autenticado escolhe um assento na grade e o segura por 10 minutos, com contagem regressiva. Duas pessoas nunca seguram o mesmo assento: o PostgreSQL decide com `UNIQUE(trip_id, seat_number, leg_index)` e `INSERT ... ON CONFLICT` ([ADR 0004](docs/adr/0004-assento-unico-por-perna.md)). Um hold vencido libera o assento na hora (expiração preguiçosa), e um processo separado limpa as reservas antigas ([ADR 0005](docs/adr/0005-expirador-de-holds-em-processo-separado.md)).
+- **Disponibilidade de assentos**: a página da viagem mostra os assentos livres de cada viagem e uma grade de assentos (livre, segurado, ocupado).
 - **Front-end** com um quadro de horários em estilo de placa de aeroporto, uma cena de estrada no topo das páginas, modo de movimento reduzido e suporte a teclado e leitor de tela.
 - **Script de seed** que cria 4 cidades, uma rota (São Paulo a Uberaba, com Campinas e Ribeirão Preto como paradas) e 7 dias de viagens às 08:00 e às 23:00, com 40 assentos cada.
 
@@ -40,16 +42,20 @@ flowchart LR
     subgraph M["Monólito FastAPI, dividido em módulos"]
         A["Camada HTTP"] --> U["users<br/>cadastro, login, refresh, me"]
         A --> C["catalog<br/>cidades, busca de viagens"]
-        U --> K["core<br/>config, db, security, errors"]
+        A --> BK["booking<br/>mapa de assentos, hold"]
+        BK --> C
+        U --> K["core<br/>config, db, security, errors, clock"]
         C --> K
+        BK --> K
     end
 
+    X["expirer<br/>processo separado, a cada 30 s"] --> K
     K --> P[("PostgreSQL 16")]
     R[("Redis 7<br/>ainda não usado")] -.->|"Fase 5"| A
 ```
 
 - Um **monólito modular**: um único artefato de deploy, com fronteiras entre módulos que podem ser separadas depois ([ADR 0001](docs/adr/0001-monolito-modular.md)).
-- **O PostgreSQL decide** cada disputa. O cadastro e a rotação do refresh token já dependem de restrições de unicidade e de um único `UPDATE` atômico, não de checagens no código da aplicação. A reserva de assentos seguirá a mesma regra.
+- **O PostgreSQL decide** cada disputa. O cadastro e a rotação do refresh token já dependem de restrições de unicidade e de um único `UPDATE` atômico, não de checagens no código da aplicação. O hold de assento segue a mesma regra: a restrição `UNIQUE` rejeita quem perde a disputa, e o código só traduz isso em um `409`.
 - O **Redis** está no Compose, mas não é usado até o mapa de assentos em tempo real (Fase 5).
 - O front-end fica em [`web/`](web/) ([ADR 0002](docs/adr/0002-front-react-typescript.md)).
 
@@ -60,6 +66,9 @@ flowchart LR
 | GET | `/health` | Verificação de funcionamento |
 | GET | `/api/cities` | Lista as cidades |
 | GET | `/api/trips?origin=<id>&destination=<id>&date=AAAA-MM-DD` | Busca viagens |
+| GET | `/api/trips/availability?trip_ids=1&trip_ids=2` | Assentos livres por viagem (até 50 viagens) |
+| GET | `/api/trips/{id}/seats` | Mapa de assentos da viagem: cada assento é `free`, `held` ou `taken` |
+| POST | `/api/trips/{id}/holds` | Segura um assento por 10 minutos (exige o access token). Corpo: `{ "seat_number": 7 }`. Devolve `201` com `expires_at` e `expires_in_seconds`; `409` com `seat_unavailable` se outra pessoa já tem o assento |
 | POST | `/api/auth/register` | Cria uma conta |
 | POST | `/api/auth/login` | Entra; devolve o access token e grava o cookie do refresh token |
 | POST | `/api/auth/refresh` | Rotaciona o refresh token e devolve um novo access token |
@@ -118,6 +127,12 @@ O seed pode ser executado mais de uma vez.
 uvicorn app.main:app --reload
 ```
 
+**4b. Rode o expirador de holds** (opcional, em outro terminal com o ambiente virtual ativo). Os assentos são liberados na hora certa mesmo sem ele; ele só limpa as reservas vencidas.
+
+```bash
+python -m app.booking.expirer
+```
+
 **5. Rode o front-end**, em outro terminal. O servidor de desenvolvimento encaminha `/api` para a API na porta 8000.
 
 ```bash
@@ -126,7 +141,7 @@ npm ci
 npm run dev
 ```
 
-Abra o endereço que o Vite mostrar (http://localhost:5173 por padrão), busque São Paulo a Uberaba para hoje e depois crie uma conta.
+Abra o endereço que o Vite mostrar (http://localhost:5173 por padrão), busque São Paulo a Uberaba para hoje, crie uma conta, abra uma viagem, escolha um assento e segure-o.
 
 ### Testes e verificações
 
@@ -149,8 +164,8 @@ As mesmas verificações rodam no GitHub Actions a cada pull request.
 | Fase | Escopo | Status |
 | --- | --- | --- |
 | 1 | Estrutura do projeto, Compose, catálogo com seed, busca de viagens, contas com JWT, CI, front-end de busca, cadastro e login | Concluída (`v0.1.0`) |
-| 2 | Reserva temporária de assento (10 min) no trecho completo. Começa pela versão ingênua, mostra o teste de 100 requisições falhando e corrige com `UNIQUE(trip_id, seat_number, leg_index)` e `INSERT ... ON CONFLICT`; expiração preguiçosa e ativa | Próxima |
-| 3 | Pagamento idempotente (`Idempotency-Key`) com gateway simulado, reconciliação e cancelamento | Planejada |
+| 2 | Reserva temporária de assento (10 min) no trecho completo. Começou pela versão ingênua, mostrou o teste de 100 requisições falhando e corrigiu com `UNIQUE(trip_id, seat_number, leg_index)` e `INSERT ... ON CONFLICT`; expiração preguiçosa e ativa; grade de assentos e contagem regressiva no front-end | Concluída (`v0.2.0`) |
+| 3 | Pagamento idempotente (`Idempotency-Key`) com gateway simulado, reconciliação e cancelamento | Próxima |
 | 4 | Reserva por trecho (A para B para C para D), preço por perna, testes de sobreposição | Planejada |
 | 5 | Mapa de assentos em tempo real (SSE + Redis pub/sub) | Planejada |
 | 6 | Deploy com CI/CD, Dockerfile e serviço `api` no Compose, resultados do Locust | Planejada |
@@ -181,6 +196,20 @@ Lacunas conhecidas desta versão, registradas aqui de propósito. Cada uma está
 - O filtro de data da busca não usa índice.
 - A busca não mostra paradas intermediárias nem preços por trecho até a Fase 4.
 
+**Reserva de assento (hold)**
+
+- Uma reserva é um assento. Comprar vários assentos em uma só compra ainda não é suportado.
+- O hold cobre apenas a viagem inteira. Trechos parciais (A para B, B para C) vêm na Fase 4; o esquema já tem `leg_index` para isso.
+- Não há como cancelar um hold nem pagá-lo até a Fase 3. Um hold só termina ao expirar.
+- A expiração ativa roda em um processo. Vários podem rodar juntos (`FOR UPDATE SKIP LOCKED`), mas nada os supervisiona até a Fase 6, e o hold é liberado na hora certa mesmo sem nenhum rodando.
+- Não há `GET` do hold atual, então recarregar a página perde a contagem regressiva (o hold continua válido até expirar).
+- O mapa de assentos é lido ao abrir a página e depois de um conflito. Ele não se atualiza sozinho até o mapa em tempo real (Fase 5).
+- A contagem regressiva ignora a latência da rede. Quem decide é o servidor: um pedido atrasado falha mesmo que a tela ainda mostre um segundo ([ADR 0006](docs/adr/0006-contador-do-hold-com-relogio-monotonico.md)).
+- O assento escolhido antes de entrar não é lembrado ao passar pela página Entrar. Depois de entrar, a pessoa volta à página da viagem, mas o cadastro ainda leva à página inicial.
+- Quando a sessão não pode ser renovada, o cabeçalho continua mostrando o usuário como autenticado até a página ser recarregada.
+- Cancelar o pedido no navegador não desfaz um hold que o servidor já criou.
+- Não há limite de quantos assentos uma conta pode segurar nem limite de requisições em `/holds`: uma única conta pode segurar um ônibus inteiro por 10 minutos, repetidamente. Cota por usuário e limite de requisições ainda não existem.
+
 **Front-end**
 
 - O proxy do Vite existe só em desenvolvimento. Servir o SPA e a API na mesma origem faz parte da Fase 6.
@@ -201,6 +230,9 @@ Lacunas conhecidas desta versão, registradas aqui de propósito. Cada uma está
 - [ADR 0001: monólito modular](docs/adr/0001-monolito-modular.md)
 - [ADR 0002: front-end em React e TypeScript](docs/adr/0002-front-react-typescript.md)
 - [ADR 0003: access token curto e refresh token rotativo](docs/adr/0003-autenticacao-access-curto-e-refresh.md)
+- [ADR 0004: um assento por perna, garantido pelo banco com UNIQUE e ON CONFLICT](docs/adr/0004-assento-unico-por-perna.md)
+- [ADR 0005: o expirador de holds roda como um processo separado](docs/adr/0005-expirador-de-holds-em-processo-separado.md)
+- [ADR 0006: o contador do hold usa segundos do servidor e um relógio monotônico](docs/adr/0006-contador-do-hold-com-relogio-monotonico.md)
 
 ## Licença
 

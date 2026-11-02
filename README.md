@@ -11,7 +11,7 @@ Intercity bus ticket sales, built as a portfolio project with one goal: **two pa
 
 Português: [README.pt-BR.md](README.pt-BR.md)
 
-> **Status:** Phase 1 of 6 (`v0.1.0`). Catalog, trip search, accounts with JWT login and a React front end are done. Seat holds, payments and real-time seat maps come in the next phases. See the [roadmap](#roadmap).
+> **Status:** Phase 2 of 6 (`v0.2.0`). Catalog, trip search, accounts with JWT login, a React front end and 10-minute seat holds are done. Payments, reservation by leg and real-time seat maps come in the next phases. See the [roadmap](#roadmap).
 
 ## Screenshots
 
@@ -28,6 +28,8 @@ The front end is called **Ônibora**. It follows the system theme and has a manu
 - **Trip search** by origin, destination and date. The price of a trip is the sum of the per-leg prices between the two cities.
 - **Accounts**: sign up (automatic sign-in afterwards), sign in, sign out, session restored on reload.
 - **Authentication** with a short-lived access token and a rotating refresh token ([ADR 0003](docs/adr/0003-autenticacao-access-curto-e-refresh.md)).
+- **Seat holds**: a signed-in passenger picks a seat on a seat grid and holds it for 10 minutes, with a countdown. Two people can never hold the same seat: PostgreSQL decides with `UNIQUE(trip_id, seat_number, leg_index)` and `INSERT ... ON CONFLICT` ([ADR 0004](docs/adr/0004-assento-unico-por-perna.md)). An expired hold frees the seat at once (lazy expiry), and a separate process cleans the old rows ([ADR 0005](docs/adr/0005-expirador-de-holds-em-processo-separado.md)).
+- **Seat availability**: the trip page shows the free seats of each trip and a seat grid (free, held, taken).
 - **Front end** with a flap-style departure board, a route scene in the page header, a reduced-motion mode and keyboard and screen-reader support.
 - **Seed script** that creates 4 cities, one route (São Paulo to Uberaba, with Campinas and Ribeirão Preto as stops) and 7 days of trips at 08:00 and 23:00, 40 seats each.
 
@@ -40,16 +42,20 @@ flowchart LR
     subgraph M["FastAPI monolith, split into modules"]
         A["HTTP layer"] --> U["users<br/>register, login, refresh, me"]
         A --> C["catalog<br/>cities, trip search"]
-        U --> K["core<br/>config, db, security, errors"]
+        A --> BK["booking<br/>seat map, seat hold"]
+        BK --> C
+        U --> K["core<br/>config, db, security, errors, clock"]
         C --> K
+        BK --> K
     end
 
+    X["expirer<br/>separate process, every 30 s"] --> K
     K --> P[("PostgreSQL 16")]
     R[("Redis 7<br/>not used yet")] -.->|"Phase 5"| A
 ```
 
 - A **modular monolith**: one deployable, with module boundaries that can be split later ([ADR 0001](docs/adr/0001-monolito-modular.md)).
-- **PostgreSQL decides** every race. Registration and refresh-token rotation already rely on unique constraints and a single atomic `UPDATE`, not on checks in application code. Seat reservation will follow the same rule.
+- **PostgreSQL decides** every race. Registration and refresh-token rotation already rely on unique constraints and a single atomic `UPDATE`, not on checks in application code. Seat holds follow the same rule: the `UNIQUE` constraint rejects the loser of a race, and the code only translates that into a `409`.
 - **Redis** is in the Compose file but unused until the real-time seat map (Phase 5).
 - The front end lives in [`web/`](web/) ([ADR 0002](docs/adr/0002-front-react-typescript.md)).
 
@@ -60,6 +66,9 @@ flowchart LR
 | GET | `/health` | Liveness check |
 | GET | `/api/cities` | List cities |
 | GET | `/api/trips?origin=<id>&destination=<id>&date=YYYY-MM-DD` | Search trips |
+| GET | `/api/trips/availability?trip_ids=1&trip_ids=2` | Free seats per trip (up to 50 trips) |
+| GET | `/api/trips/{id}/seats` | Seat map of a trip: each seat is `free`, `held` or `taken` |
+| POST | `/api/trips/{id}/holds` | Hold a seat for 10 minutes (needs the access token). Body: `{ "seat_number": 7 }`. Returns `201` with `expires_at` and `expires_in_seconds`; `409` with `seat_unavailable` if someone else has the seat |
 | POST | `/api/auth/register` | Create an account |
 | POST | `/api/auth/login` | Sign in; returns the access token and sets the refresh cookie |
 | POST | `/api/auth/refresh` | Rotate the refresh token and return a new access token |
@@ -118,6 +127,12 @@ The seed can be run more than once.
 uvicorn app.main:app --reload
 ```
 
+**4b. Run the hold expirer** (optional, in another terminal with the virtualenv active). Seats are freed on time without it; it only cleans up expired reservations.
+
+```bash
+python -m app.booking.expirer
+```
+
 **5. Run the front end**, in another terminal. The dev server proxies `/api` to the API on port 8000.
 
 ```bash
@@ -126,7 +141,7 @@ npm ci
 npm run dev
 ```
 
-Open the URL Vite prints (http://localhost:5173 by default), search São Paulo to Uberaba for today, then create an account.
+Open the URL Vite prints (http://localhost:5173 by default), search São Paulo to Uberaba for today, create an account, open a trip, pick a seat and hold it.
 
 ### Tests and checks
 
@@ -149,8 +164,8 @@ The same checks run in GitHub Actions on every pull request.
 | Phase | Scope | Status |
 | --- | --- | --- |
 | 1 | Project structure, Compose, catalog with seed, trip search, accounts with JWT, CI, front end for search, sign up and sign in | Done (`v0.1.0`) |
-| 2 | 10-minute seat hold on the full trip. Starts with a naive version, shows the 100-request test failing, then fixes it with `UNIQUE(trip_id, seat_number, leg_index)` and `INSERT ... ON CONFLICT`; lazy and active expiry | Next |
-| 3 | Idempotent payment (`Idempotency-Key`) with a simulated gateway, reconciliation and cancellation | Planned |
+| 2 | 10-minute seat hold on the full trip. Started with a naive version, showed the 100-request test failing, then fixed it with `UNIQUE(trip_id, seat_number, leg_index)` and `INSERT ... ON CONFLICT`; lazy and active expiry; seat grid and hold countdown in the front end | Done (`v0.2.0`) |
+| 3 | Idempotent payment (`Idempotency-Key`) with a simulated gateway, reconciliation and cancellation | Next |
 | 4 | Reservation by leg (A to B to C to D), per-leg pricing, overlap tests | Planned |
 | 5 | Real-time seat map (SSE + Redis pub/sub) | Planned |
 | 6 | Deploy with CI/CD, Dockerfile and `api` service in Compose, Locust results | Planned |
@@ -181,6 +196,20 @@ Known gaps in this version, kept here on purpose. Each one is either planned or 
 - The date filter of the search does not use an index.
 - The search does not show intermediate stops or per-leg prices until Phase 4.
 
+**Seat holds**
+
+- A reservation is one seat. Buying several seats in one purchase is not supported yet.
+- A hold covers the whole trip only. Partial legs (A to B, B to C) come in Phase 4; the schema already has `leg_index` for it.
+- There is no way to cancel a hold or to pay for it until Phase 3. A hold ends only by expiring.
+- Active expiry runs in one process. Several can run at once (`FOR UPDATE SKIP LOCKED`), but nothing supervises them until Phase 6, and the hold is freed on time even if none is running.
+- There is no `GET` for the current hold, so reloading the page loses the countdown (the hold itself stays valid until it expires).
+- The seat map is read on page load and after a conflict. It does not update by itself until the real-time map (Phase 5).
+- The countdown ignores network latency. The server decides: a late request fails even if the screen still shows a second left ([ADR 0006](docs/adr/0006-contador-do-hold-com-relogio-monotonico.md)).
+- The seat chosen before signing in is not remembered across the sign-in page. After signing in the passenger returns to the trip page, but sign-up still goes to the home page.
+- When the session cannot be renewed, the header keeps showing the user as signed in until the page is reloaded.
+- Cancelling the request in the browser does not undo a hold the server already created.
+- There is no cap on how many seats one account can hold and no rate limit on `/holds`, so a single account can hold a whole bus for 10 minutes, repeatedly. A per-user cap and a rate limit are not implemented yet.
+
 **Front end**
 
 - The Vite proxy exists only in development. Serving the SPA and the API from the same origin is part of Phase 6.
@@ -201,6 +230,9 @@ Known gaps in this version, kept here on purpose. Each one is either planned or 
 - [ADR 0001: modular monolith](docs/adr/0001-monolito-modular.md)
 - [ADR 0002: React and TypeScript front end](docs/adr/0002-front-react-typescript.md)
 - [ADR 0003: short access token and rotating refresh token](docs/adr/0003-autenticacao-access-curto-e-refresh.md)
+- [ADR 0004: one seat per leg, enforced by the database with UNIQUE and ON CONFLICT](docs/adr/0004-assento-unico-por-perna.md)
+- [ADR 0005: the hold expirer runs as a separate process](docs/adr/0005-expirador-de-holds-em-processo-separado.md)
+- [ADR 0006: the hold countdown uses server seconds and a monotonic clock](docs/adr/0006-contador-do-hold-com-relogio-monotonico.md)
 
 The ADRs are written in Portuguese.
 

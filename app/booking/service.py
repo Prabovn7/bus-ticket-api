@@ -1,6 +1,7 @@
 from datetime import timedelta
+from typing import NamedTuple
 
-from sqlalchemy import and_, delete, func, select, update
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -107,3 +108,90 @@ def expire_holds(session: Session, clock: Clock, batch_size: int = 100) -> int:
     )
     session.commit()
     return len(reservation_ids)
+
+
+class SeatStatus(NamedTuple):
+    seat_number: int
+    status: str  # "free" | "held" | "taken"
+
+
+def seat_statuses(session: Session, clock: Clock, trip_id: int) -> list[SeatStatus]:
+    """Status of every seat of a trip, computed from the legs and the clock.
+
+    An overdue hold counts as free right away: availability never waits for the
+    expirer, which is only housekeeping (ADR 0005). The boundary matches
+    hold_seat: a hold is over only when expires_at < now, so at the exact
+    instant it still belongs to the first buyer.
+
+    Today a hold covers the whole trip, so any occupied leg makes the seat busy.
+    Phase 4 will need a per-stretch answer.
+    """
+    trip = session.get(Trip, trip_id)
+    if trip is None:
+        raise TripNotFound
+
+    now = clock.now()
+    rows = session.execute(
+        select(
+            SeatLeg.seat_number,
+            func.bool_or(SeatLeg.expires_at.is_(None)).label("taken"),
+            func.bool_or(SeatLeg.expires_at >= now).label("held"),
+        )
+        .where(SeatLeg.trip_id == trip_id)
+        .group_by(SeatLeg.seat_number)
+    )
+    by_seat = {row.seat_number: row for row in rows}
+
+    result = []
+    for seat_number in range(1, trip.capacity + 1):
+        row = by_seat.get(seat_number)
+        if row is not None and row.taken:
+            status = "taken"
+        elif row is not None and row.held:
+            status = "held"
+        else:
+            status = "free"
+        result.append(SeatStatus(seat_number, status))
+    return result
+
+
+class TripAvailability(NamedTuple):
+    trip_id: int
+    capacity: int
+    free: int
+
+
+def free_seat_counts(session: Session, clock: Clock, trip_ids: list[int]) -> list[TripAvailability]:
+    """How many seats are free on each of the given trips, in one query.
+
+    A seat is busy when it has a paid leg or a hold that is not over yet (the same
+    rule as seat_statuses), and it counts once however many legs it occupies.
+    Unknown trips are left out, so one stale id never breaks the others.
+    """
+    ids = sorted(set(trip_ids))
+    if not ids:
+        return []
+
+    now = clock.now()
+    busy = (
+        select(
+            SeatLeg.trip_id,
+            func.count(SeatLeg.seat_number.distinct()).label("busy_seats"),
+        )
+        .where(
+            SeatLeg.trip_id.in_(ids),
+            or_(SeatLeg.expires_at.is_(None), SeatLeg.expires_at >= now),
+        )
+        .group_by(SeatLeg.trip_id)
+        .subquery()
+    )
+    rows = session.execute(
+        select(Trip.id, Trip.capacity, func.coalesce(busy.c.busy_seats, 0))
+        .outerjoin(busy, busy.c.trip_id == Trip.id)
+        .where(Trip.id.in_(ids))
+        .order_by(Trip.id)
+    )
+    return [
+        TripAvailability(trip_id, capacity, capacity - busy_seats)
+        for trip_id, capacity, busy_seats in rows
+    ]

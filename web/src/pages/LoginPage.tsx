@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { ApiRequestError } from '../api/client'
+import { returnPath } from '../auth/returnPath'
 import { useAuth } from '../auth/useAuth'
 import ErrorMessage from '../components/ErrorMessage'
 import Field from '../components/Field'
@@ -23,6 +24,7 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   // O estado só muda na próxima renderização; o ref bloqueia um segundo envio no mesmo instante.
   const sending = useRef(false)
+  const location = useLocation()
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -41,7 +43,8 @@ function LoginPage() {
       sending.current = false
       return
     }
-    void navigate('/')
+    // replace: o botão Voltar não reabre o formulário de login de quem já entrou.
+    void navigate(returnPath(location.state), { replace: true })
   }
 
   return (

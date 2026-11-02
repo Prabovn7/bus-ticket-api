@@ -6,6 +6,7 @@ import BoardState from '../components/BoardState'
 import HoloCard from '../components/HoloCard'
 import SearchForm, { type SearchValues } from '../components/SearchForm'
 import TripBoard from '../components/TripBoard'
+import { useFreeSeats } from '../hooks/useFreeSeats'
 import { useSearchTrips } from '../hooks/useSearchTrips'
 import { todayInSaoPaulo } from '../lib/formatting'
 import HeroScene from '../components/HeroScene'
@@ -28,6 +29,7 @@ function SearchPage() {
   const [searched, setSearched] = useState<SearchValues | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const { state, search } = useSearchTrips()
+  const free = useFreeSeats(state.status === 'success' ? state.trips : null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -103,6 +105,7 @@ function SearchPage() {
           origin={nameOf(searched.origin)}
           destination={nameOf(searched.destination)}
           date={searched.date}
+          free={free}
         />
       )
     }

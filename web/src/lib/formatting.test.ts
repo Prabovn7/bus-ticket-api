@@ -3,6 +3,7 @@ import {
   addDays,
   formatBRL,
   formatClock,
+  formatCountdown,
   formatDay,
   formatDuration,
   isNextDay,
@@ -70,5 +71,22 @@ describe('formatDay', () => {
   it('escreve o dia por extenso, em português', () => {
     expect(formatDay('2026-10-20')).toContain('20 de outubro')
     expect(formatDay('2026-10-20')).toContain('terça')
+  })
+})
+
+describe('formatCountdown', () => {
+  it.each([
+    [600, '10:00'],
+    [599, '09:59'],
+    [61, '01:01'],
+    [59, '00:59'],
+    [5, '00:05'],
+    [0, '00:00'],
+  ])('%i segundos viram %s', (seconds, text) => {
+    expect(formatCountdown(seconds)).toBe(text)
+  })
+
+  it('nunca mostra tempo negativo', () => {
+    expect(formatCountdown(-3)).toBe('00:00')
   })
 })

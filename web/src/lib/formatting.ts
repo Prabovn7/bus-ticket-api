@@ -37,6 +37,13 @@ export function formatDuration(minutes: number): string {
   return rest === 0 ? `${hours}h` : `${hours}h${String(rest).padStart(2, '0')}`
 }
 
+/** Segundos como "MM:SS" (10:00, 09:59). Nunca negativo. */
+export function formatCountdown(seconds: number): string {
+  const total = Math.max(0, seconds)
+  const minutes = Math.floor(total / 60)
+  return `${String(minutes).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+}
+
 export function formatClock(iso: string): string {
   return clock.format(new Date(iso))
 }

@@ -1,6 +1,7 @@
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { useRef } from 'react'
+import { Link } from 'react-router'
 import type { TripResult } from '../api/types'
 import { formatBRL, formatClock, formatDay, formatDuration, isNextDay } from '../lib/formatting'
 import { useReducedMotion } from '../motion/useReducedMotion'
@@ -19,17 +20,30 @@ interface TripBoardProps {
   origin: string
   destination: string
   date: string
+  /** Assentos livres por viagem; sem o número, o quadro mostra só o total de lugares. */
+  free?: ReadonlyMap<number, number> | null
 }
 
 function minutesBetween(startIso: string, endIso: string): number {
   return Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000)
 }
 
-function formatSeats(capacity: number): string {
-  return `${capacity} ${capacity === 1 ? 'livre' : 'livres'}`
+function formatSeats(
+  trip: TripResult,
+  free: ReadonlyMap<number, number> | null | undefined,
+): string {
+  const left = free?.get(trip.trip_id)
+  if (left === undefined) {
+    return `${trip.capacity} ${trip.capacity === 1 ? 'lugar' : 'lugares'}`
+  }
+  return `${left} ${left === 1 ? 'livre' : 'livres'}`
 }
 
-function TripBoard({ trips, origin, destination, date }: TripBoardProps) {
+function seatLinkLabel(trip: TripResult): string {
+  return `Escolher assento na viagem das ${formatClock(trip.departure_at)}`
+}
+
+function TripBoard({ trips, origin, destination, date, free }: TripBoardProps) {
   const root = useRef<HTMLDivElement>(null)
   const reduced = useReducedMotion()
   // Chave das viagens: renderizar de novo os mesmos dados não repete a animação.
@@ -75,6 +89,9 @@ function TripBoard({ trips, origin, destination, date }: TripBoardProps) {
             <th scope="col">Duração</th>
             <th scope="col">Lugares</th>
             <th scope="col">Preço</th>
+            <th scope="col">
+              <span className="so-leitor">Assento</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -92,8 +109,17 @@ function TripBoard({ trips, origin, destination, date }: TripBoardProps) {
                 )}
               </td>
               <td>{formatDuration(minutesBetween(trip.departure_at, trip.arrival_at))}</td>
-              <td>{formatSeats(trip.capacity)}</td>
+              <td>{formatSeats(trip, free)}</td>
               <td className="preco">{formatBRL(trip.price_cents)}</td>
+              <td>
+                <Link
+                  className="botao botao-quadro"
+                  to={`/viagens/${trip.trip_id}`}
+                  aria-label={seatLinkLabel(trip)}
+                >
+                  Escolher assento
+                </Link>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -116,9 +142,16 @@ function TripBoard({ trips, origin, destination, date }: TripBoardProps) {
             )}
             <div className="viagem-detalhes">
               <span>{formatDuration(minutesBetween(trip.departure_at, trip.arrival_at))}</span>
-              <span>{formatSeats(trip.capacity)}</span>
+              <span>{formatSeats(trip, free)}</span>
               <strong className="preco">{formatBRL(trip.price_cents)}</strong>
             </div>
+            <Link
+              className="botao botao-quadro"
+              to={`/viagens/${trip.trip_id}`}
+              aria-label={seatLinkLabel(trip)}
+            >
+              Escolher assento
+            </Link>
           </li>
         ))}
       </ul>

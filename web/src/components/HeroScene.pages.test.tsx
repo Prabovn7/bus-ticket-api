@@ -20,6 +20,7 @@ describe.each([
   ['/', 'Para onde você vai?'],
   ['/entrar', 'Entrar'],
   ['/criar-conta', 'Criar conta'],
+  ['/viagens/1', 'Escolher assento'],
 ])('tela %s', (path, title) => {
   it('tem uma cena só, com o título da tela dentro', () => {
     const { scenes } = renderAt(path)

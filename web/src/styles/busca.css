@@ -57,6 +57,18 @@ input[type='date'] {
   transform: translateY(1px);
 }
 
+/* Link com cara de botão ("Escolher assento"). */
+a.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.viagem .botao {
+  margin-top: 0.75rem;
+}
+
 .botao-quadro {
   border-color: var(--ambar);
   background: transparent;

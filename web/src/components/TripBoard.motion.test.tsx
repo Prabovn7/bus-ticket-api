@@ -1,8 +1,9 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { describe, expect, it } from 'vitest'
 import type { TripResult } from '../api/types'
 import { mockMotionPreference } from '../test/motion'
+import { render } from '../test/render'
 import TripBoard from './TripBoard'
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
