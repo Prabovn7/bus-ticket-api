@@ -30,3 +30,17 @@ export interface TokenResponse {
   token_type: string
   expires_in: number
 }
+
+export type SeatState = 'free' | 'held' | 'taken'
+
+export interface Seat {
+  seat_number: number
+  status: SeatState
+}
+
+/** Resposta de GET /api/trips/{id}/seats. */
+export interface SeatMap {
+  trip_id: number
+  capacity: number
+  seats: Seat[]
+}
