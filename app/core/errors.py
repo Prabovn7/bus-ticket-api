@@ -51,6 +51,36 @@ class SeatUnavailable(DomainError):
     message = "Este assento não está mais disponível."
 
 
+class ReservationNotFound(DomainError):
+    status_code = 404
+    code = "reservation_not_found"
+    message = "Reserva não encontrada."
+
+
+class ReservationNotPayable(DomainError):
+    status_code = 409
+    code = "reservation_not_payable"
+    message = "Esta reserva não pode mais ser paga."
+
+
+class HoldExpired(DomainError):
+    status_code = 410
+    code = "hold_expired"
+    message = "O tempo da reserva acabou. Escolha o assento novamente."
+
+
+class IdempotencyConflict(DomainError):
+    status_code = 422
+    code = "idempotency_key_reused"
+    message = "Esta Idempotency-Key já foi usada com outro pedido."
+
+
+class RequestInProgress(DomainError):
+    status_code = 409
+    code = "request_in_progress"
+    message = "Este pedido ainda está sendo processado."
+
+
 class Unauthorized(DomainError):
     status_code = 401
     headers = {"WWW-Authenticate": "Bearer"}
