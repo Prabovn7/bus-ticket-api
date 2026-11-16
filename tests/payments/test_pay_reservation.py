@@ -6,7 +6,7 @@ from sqlalchemy import create_engine, func, select, text
 from sqlalchemy.orm import Session
 
 from app.booking.models import ReservationStatus, SeatLeg
-from app.booking.service import hold_seat
+from app.booking.service import expire_holds, hold_seat
 from app.core.errors import (
     HoldExpired,
     IdempotencyConflict,
@@ -213,6 +213,30 @@ def test_extension_never_shortens_an_existing_hold(
     pay(session, clock, gateway, user, reservation)
 
     assert seen == [original] * 3
+
+
+def test_expirer_leaves_a_reservation_that_is_being_paid(
+    db_engine, session, clock, gateway, user, reservation
+):
+    clock.advance(timedelta(minutes=9, seconds=55))  # 5 s left on the hold
+    expired_meanwhile = []
+
+    def expirer_runs_while_charging():
+        clock.advance(timedelta(seconds=10))  # the original hold is now over
+        with Session(db_engine) as other:
+            expired_meanwhile.append(expire_holds(other, clock))
+
+    gateway.on_charge = expirer_runs_while_charging
+
+    response = pay(session, clock, gateway, user, reservation)
+
+    assert expired_meanwhile == [0]
+    assert response.status_code == 200
+    session.refresh(reservation)
+    assert reservation.status == ReservationStatus.PAID
+    legs = session.scalars(select(SeatLeg).where(SeatLeg.reservation_id == reservation.id)).all()
+    assert len(legs) == 3
+    assert all(leg.expires_at is None for leg in legs)
 
 
 def test_expired_hold_is_refused_without_charging(session, clock, gateway, user, reservation):
