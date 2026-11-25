@@ -8,22 +8,26 @@ answers would block everyone else who touches that reservation.
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.booking.legs import legs_for
 from app.booking.models import Reservation, ReservationStatus, SeatLeg
+from app.catalog.models import RouteStop, Trip
 from app.core.clock import Clock
 from app.core.errors import (
     DomainError,
     HoldExpired,
     IdempotencyConflict,
+    PaymentInProgress,
     RequestInProgress,
+    ReservationNotCancellable,
     ReservationNotFound,
     ReservationNotPayable,
+    TripAlreadyDeparted,
 )
 from app.payments.gateway import ChargeResult, GatewayStatus, PaymentGateway, Scenario
 from app.payments.models import IdempotencyKey, Payment, PaymentStatus
@@ -205,3 +209,111 @@ def _settle(
     )
     session.commit()
     return PaymentResponse(status_code, body)
+
+
+@dataclass(frozen=True)
+class CancelResult:
+    reservation_id: int
+    status: str
+    refund_status: str  # "none", "pending" (refund still owed) or "refunded"
+
+
+def cancel_reservation(
+    session: Session,
+    clock: Clock,
+    gateway: PaymentGateway,
+    user_id: int,
+    reservation_id: int,
+) -> CancelResult:
+    """Cancel a reservation once, however many times the request is sent.
+
+    Idempotent by state, with no key: the request that moves the reservation to
+    cancelled is the only one that refunds. A: lock, check, cancel, free the seat,
+    commit. Gateway: refund with no transaction open. B: mark the payment refunded.
+
+    If the refund fails, the cancellation stands and the payment stays approved:
+    a replay reports refund_status "pending" and does not retry; reconciliation will.
+    """
+    try:
+        result, to_refund = _cancel(session, clock, user_id, reservation_id)
+    except DomainError:
+        session.rollback()
+        raise
+    session.commit()
+    if to_refund is None:
+        return result
+
+    payment_id, gateway_ref = to_refund
+    gateway.refund(gateway_ref)
+
+    session.execute(
+        update(Payment)
+        .where(Payment.id == payment_id, Payment.status == PaymentStatus.APPROVED)
+        .values(status=PaymentStatus.REFUNDED)
+    )
+    session.commit()
+    return CancelResult(result.reservation_id, result.status, "refunded")
+
+
+def _cancel(
+    session: Session, clock: Clock, user_id: int, reservation_id: int
+) -> tuple[CancelResult, tuple[int, str] | None]:
+    """Transaction A. Returns the result and, if this request owes a refund, (payment_id, ref)."""
+    reservation = session.scalar(
+        select(Reservation)
+        .where(Reservation.id == reservation_id, Reservation.user_id == user_id)
+        .with_for_update()
+    )
+    if reservation is None:  # unknown or someone else's: both look like 404
+        raise ReservationNotFound
+
+    payment = session.scalar(
+        select(Payment)
+        .where(Payment.reservation_id == reservation.id)
+        .order_by(Payment.id.desc())
+        .limit(1)
+    )
+    if reservation.status == ReservationStatus.CANCELLED:  # replay: the state decides
+        return CancelResult(reservation.id, "cancelled", _refund_status(payment)), None
+
+    now = clock.now()
+    if reservation.status == ReservationStatus.EXPIRED or (
+        reservation.status == ReservationStatus.HELD and reservation.expires_at < now
+    ):
+        raise ReservationNotCancellable
+    if payment is not None and payment.status == PaymentStatus.PENDING:
+        raise PaymentInProgress
+    if now >= _departure(session, reservation):
+        raise TripAlreadyDeparted
+
+    to_refund = None
+    if reservation.status == ReservationStatus.PAID and payment is not None:
+        to_refund = (payment.id, payment.gateway_ref)
+
+    reservation.status = ReservationStatus.CANCELLED
+    session.execute(delete(SeatLeg).where(SeatLeg.reservation_id == reservation.id))
+    refund_status = "none" if to_refund is None else "pending"
+    return CancelResult(reservation.id, "cancelled", refund_status), to_refund
+
+
+def _refund_status(payment: Payment | None) -> str:
+    if payment is None:
+        return "none"
+    if payment.status == PaymentStatus.REFUNDED:
+        return "refunded"
+    if payment.status == PaymentStatus.APPROVED:
+        return "pending"  # refund in flight or failed: reconciliation settles it
+    return "none"
+
+
+def _departure(session: Session, reservation: Reservation) -> datetime:
+    """When the bus leaves the reservation's origin stop: trip departure + that stop's offset."""
+    row = session.execute(
+        select(Trip.departure_at, RouteStop.offset_minutes)
+        .join(RouteStop, RouteStop.route_id == Trip.route_id)
+        .where(
+            Trip.id == reservation.trip_id,
+            RouteStop.position == reservation.origin_position,
+        )
+    ).one()
+    return row.departure_at + timedelta(minutes=row.offset_minutes)
