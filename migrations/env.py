@@ -7,6 +7,7 @@ from app.booking import models as booking_models  # noqa: F401
 from app.catalog import models  # noqa: F401
 from app.core.config import get_settings
 from app.core.db import Base
+from app.payments import models as payment_models  # noqa: F401
 from app.users import models as user_models  # noqa: F401
 
 config = context.config
