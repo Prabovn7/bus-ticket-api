@@ -28,3 +28,11 @@ class ReservationDetailOut(BaseModel):
     expires_at: datetime | None
     expires_in_seconds: int | None
     payment_status: str | None
+
+
+class CancelOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    reservation_id: int
+    status: str
+    refund_status: str

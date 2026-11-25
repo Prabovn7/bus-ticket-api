@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from app.core.clock import Clock, get_clock
 from app.payments import reads, service
 from app.payments.gateway import PaymentGateway, SimulatedGateway
-from app.payments.schemas import PayIn, ReservationDetailOut
+from app.payments.schemas import CancelOut, PayIn, ReservationDetailOut
 from app.users.dependencies import CurrentUser, SessionDep
 
 router = APIRouter(prefix="/api", tags=["payments"])
@@ -47,3 +47,14 @@ def pay_reservation(
         session, clock, gateway, user.id, reservation_id, idempotency_key, body.scenario
     )
     return JSONResponse(status_code=result.status_code, content=result.body)
+
+
+@router.post("/reservations/{reservation_id}/cancel", response_model=CancelOut)
+def cancel_my_reservation(
+    reservation_id: int,
+    session: SessionDep,
+    user: CurrentUser,
+    clock: ClockDep,
+    gateway: GatewayDep,
+):
+    return service.cancel_reservation(session, clock, gateway, user.id, reservation_id)

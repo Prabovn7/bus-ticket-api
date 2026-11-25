@@ -81,6 +81,24 @@ class RequestInProgress(DomainError):
     message = "Este pedido ainda está sendo processado."
 
 
+class ReservationNotCancellable(DomainError):
+    status_code = 409
+    code = "reservation_not_cancellable"
+    message = "Esta reserva não pode mais ser cancelada."
+
+
+class TripAlreadyDeparted(DomainError):
+    status_code = 409
+    code = "trip_already_departed"
+    message = "A viagem já partiu."
+
+
+class PaymentInProgress(DomainError):
+    status_code = 409
+    code = "payment_in_progress"
+    message = "Há um pagamento em análise. Tente de novo quando ele for resolvido."
+
+
 class Unauthorized(DomainError):
     status_code = 401
     headers = {"WWW-Authenticate": "Bearer"}
