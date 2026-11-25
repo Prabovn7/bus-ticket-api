@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from app.booking.router import router as booking_router
 from app.catalog.router import router as catalog_router
 from app.core.errors import register_exception_handlers
+from app.payments.router import router as payments_router
 from app.users.router import router as users_router
 
 
@@ -12,6 +13,7 @@ def create_app() -> FastAPI:
     app.include_router(catalog_router)
     app.include_router(users_router)
     app.include_router(booking_router)
+    app.include_router(payments_router)
 
     @app.get("/health")
     def health() -> dict[str, str]:
