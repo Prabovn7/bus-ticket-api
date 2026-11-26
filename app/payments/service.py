@@ -172,6 +172,7 @@ def _prepare_payment(
         reservation_id=reservation.id,
         amount_cents=reservation.price_cents,
         gateway_ref=gateway_ref,
+        created_at=now,
     )
     session.add(payment)
     session.flush()
