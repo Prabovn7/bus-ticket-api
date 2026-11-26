@@ -65,3 +65,10 @@ mesmo tempo sem se atrapalhar.
   Ainda não há supervisão (a política de reinício do Compose entra na Fase 6).
 - Limitações: um expirador, em um único banco; o log só registra quando algo expira ou
   falha, e não há métrica nem verificação de saúde.
+
+## Atualização (Fase 3)
+
+O comando passou a ser `python -m app.worker`. O laço continua em
+`app.booking.expirer` (`run_expirer`), mas agora recebe tarefas extras por parâmetro; o
+`app/worker.py` as monta e é o ponto de entrada do processo. Veja o
+[ADR 0009](0009-reconciliacao-de-pagamentos.md).
