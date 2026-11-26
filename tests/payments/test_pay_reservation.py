@@ -331,3 +331,35 @@ def test_concurrent_requests_with_one_key_charge_once(
     assert all(answer == answers[0] for answer in answers)
     assert len(gateway.charges) == 1
     assert count(session, Payment) == 1
+
+
+def test_the_reference_is_saved_before_the_gateway_is_called(
+    db_engine, session, clock, gateway, user, reservation
+):
+    """A crash right after charge() must not lose the reference: the row already has it."""
+    seen: list[str | None] = []
+
+    def observe() -> None:
+        with Session(db_engine) as other:
+            seen.extend(other.scalars(select(Payment.gateway_ref)))
+
+    gateway.on_charge = observe
+
+    pay(session, clock, gateway, user, reservation)
+
+    saved = session.scalars(select(Payment.gateway_ref)).one()
+    assert seen == [saved]
+    assert gateway.charges == [(saved, reservation.price_cents)]
+
+
+def test_a_gateway_failure_keeps_the_reference_for_reconciliation(
+    session, clock, gateway, user, reservation
+):
+    gateway.fail_with = GatewayDown("connection lost")
+
+    with pytest.raises(GatewayDown):
+        pay(session, clock, gateway, user, reservation)
+
+    payment = session.scalars(select(Payment)).one()
+    assert payment.status == PaymentStatus.PENDING
+    assert payment.gateway_ref is not None
