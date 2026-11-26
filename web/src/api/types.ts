@@ -81,3 +81,13 @@ export interface Reservation {
   expires_in_seconds: number | null // segundos que faltam; null se não houver prazo
   payment_status: string | null
 }
+
+/** Cenário do gateway simulado, escolhido no modo demonstração. */
+export type PayScenario = 'approve' | 'decline' | 'delay'
+
+/** Resultado de um pagamento: o corpo de 200 (approved), 202 (pending) e 402 (declined). */
+export interface Payment {
+  payment_id: number
+  status: string
+  reservation_status: string
+}
