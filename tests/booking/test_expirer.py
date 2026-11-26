@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.booking.expirer import expire_all_overdue, run_expirer
+from app.booking.expirer import Task, expire_all_overdue, run_expirer
 from app.booking.models import Reservation, ReservationStatus, SeatLeg
 from app.booking.service import hold_seat
 
@@ -24,6 +24,30 @@ class StopAfter(threading.Event):
         if self._waits_left <= 0:
             self.set()
         return self.is_set()
+
+
+class RecordingTask:
+    """An extra task that counts its calls and can fail with a chosen error."""
+
+    def __init__(self, name: str, error: Exception | None = None, fail_times: int = 0) -> None:
+        self.name = name
+        self.calls = 0
+        self._error = error
+        self._failures_left = fail_times
+
+    def run(self) -> int:
+        self.calls += 1
+        if self._error is not None and self._failures_left > 0:
+            self._failures_left -= 1
+            raise self._error
+        return 0
+
+    def as_task(self) -> Task:
+        return Task(self.name, self.run)
+
+
+def database_down() -> OperationalError:
+    return OperationalError("SELECT 1", None, Exception("database is down"))
 
 
 def hold_many(session, clock, trip_id, user_id, seats) -> list[int]:
@@ -98,3 +122,109 @@ def test_an_unexpected_error_is_not_swallowed():
 
     with pytest.raises(RuntimeError, match="bug in the expirer"):
         run_expirer(broken_factory, None, StopAfter(1), interval=0.01)
+
+
+def test_extra_tasks_run_on_every_tick(db_engine, session, clock):
+    task = RecordingTask("cleanup")
+
+    run_expirer(
+        sessionmaker(bind=db_engine),
+        clock,
+        StopAfter(3),
+        interval=0.01,
+        extra_tasks=[task.as_task()],
+    )
+
+    assert task.calls == 3
+
+
+def test_extra_tasks_run_after_the_expiration_in_the_same_tick(
+    db_engine, session, clock, trip, user
+):
+    hold_many(session, clock, trip.id, user.id, [1])
+    clock.advance(timedelta(minutes=11))
+    session.rollback()
+    seen = []
+
+    def look() -> int:
+        session.rollback()
+        seen.append(statuses(session))
+        return 0
+
+    run_expirer(
+        sessionmaker(bind=db_engine),
+        clock,
+        StopAfter(1),
+        interval=0.01,
+        extra_tasks=[Task("look", look)],
+    )
+
+    assert seen == [[ReservationStatus.EXPIRED]]
+
+
+def test_extra_tasks_still_run_when_the_expiration_fails(clock, caplog):
+    def broken_factory():
+        raise database_down()
+
+    task = RecordingTask("cleanup")
+
+    with caplog.at_level(logging.ERROR, logger="app.booking.expirer"):
+        run_expirer(
+            broken_factory, clock, StopAfter(1), interval=0.01, extra_tasks=[task.as_task()]
+        )
+
+    assert "hold expiration failed" in caplog.text
+    assert task.calls == 1
+
+
+def test_a_failing_task_blocks_neither_the_expirer_nor_the_next_tasks(
+    db_engine, session, clock, trip, user, caplog
+):
+    hold_many(session, clock, trip.id, user.id, [1])
+    clock.advance(timedelta(minutes=11))
+    session.rollback()
+    broken = RecordingTask("reconciliation", error=database_down(), fail_times=99)
+    healthy = RecordingTask("cleanup")
+
+    with caplog.at_level(logging.ERROR, logger="app.booking.expirer"):
+        run_expirer(
+            sessionmaker(bind=db_engine),
+            clock,
+            StopAfter(1),
+            interval=0.01,
+            extra_tasks=[broken.as_task(), healthy.as_task()],
+        )
+
+    assert statuses(session) == [ReservationStatus.EXPIRED]
+    assert healthy.calls == 1
+    assert "reconciliation failed" in caplog.text
+
+
+def test_a_failed_task_is_retried_on_the_next_tick(db_engine, session, clock):
+    flaky = RecordingTask("reconciliation", error=database_down(), fail_times=1)
+
+    run_expirer(
+        sessionmaker(bind=db_engine),
+        clock,
+        StopAfter(2),
+        interval=0.01,
+        extra_tasks=[flaky.as_task()],
+    )
+
+    assert flaky.calls == 2
+
+
+def test_an_unexpected_error_in_a_task_is_not_swallowed(db_engine, session, clock):
+    buggy = RecordingTask("reconciliation", error=RuntimeError("bug in the task"), fail_times=1)
+    after = RecordingTask("cleanup")
+
+    with pytest.raises(RuntimeError, match="bug in the task"):
+        run_expirer(
+            sessionmaker(bind=db_engine),
+            clock,
+            StopAfter(1),
+            interval=0.01,
+            extra_tasks=[buggy.as_task(), after.as_task()],
+        )
+
+    assert after.calls == 0
