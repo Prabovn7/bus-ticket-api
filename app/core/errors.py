@@ -99,6 +99,18 @@ class PaymentInProgress(DomainError):
     message = "Há um pagamento em análise. Tente de novo quando ele for resolvido."
 
 
+class PaymentAlreadyResolved(DomainError):
+    status_code = 409
+    code = "payment_already_resolved"
+    message = "Este pagamento já foi resolvido. Consulte a reserva para ver o resultado."
+
+
+class SeatLost(DomainError):
+    status_code = 409
+    code = "seat_lost"
+    message = "O assento deixou de ser seu antes da confirmação. O valor será estornado."
+
+
 class Unauthorized(DomainError):
     status_code = 401
     headers = {"WWW-Authenticate": "Bearer"}
