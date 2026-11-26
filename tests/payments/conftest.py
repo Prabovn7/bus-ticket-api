@@ -5,7 +5,7 @@ import pytest
 
 from app.booking.service import hold_seat
 from app.core.clock import Clock
-from app.payments.gateway import ChargeResult, Scenario, SimulatedGateway
+from app.payments.gateway import GatewayStatus, SimulatedGateway
 from app.users.models import User
 
 SEAT = 7
@@ -14,14 +14,15 @@ SEAT = 7
 class FakeGateway(SimulatedGateway):
     """The simulated gateway, plus a record of every call and ways to misbehave.
 
-    Set on_charge or on_refund to run code at the moment of the call (what a second
-    connection sees, a retry arriving), latency to make the gateway slow, or
-    fail_with and refund_fail_with to make it blow up.
+    charges holds (ref, amount_cents) for every charge. Set on_charge or on_refund
+    to run code at the moment of the call (what a second connection sees, a retry
+    arriving), latency to make the gateway slow, or fail_with and refund_fail_with
+    to make it blow up.
     """
 
     def __init__(self, clock: Clock) -> None:
         super().__init__(clock)
-        self.charges: list[tuple[int, Scenario]] = []
+        self.charges: list[tuple[str, int]] = []
         self.refunds: list[str] = []
         self.on_charge: Callable[[], None] | None = None
         self.on_refund: Callable[[], None] | None = None
@@ -29,15 +30,15 @@ class FakeGateway(SimulatedGateway):
         self.fail_with: Exception | None = None
         self.refund_fail_with: Exception | None = None
 
-    def charge(self, amount_cents: int, scenario: Scenario) -> ChargeResult:
-        self.charges.append((amount_cents, scenario))
+    def charge(self, ref: str, amount_cents: int) -> GatewayStatus:
+        self.charges.append((ref, amount_cents))
         if self.on_charge is not None:
             self.on_charge()
         if self.latency:
             time.sleep(self.latency)
         if self.fail_with is not None:
             raise self.fail_with
-        return super().charge(amount_cents, scenario)
+        return super().charge(ref, amount_cents)
 
     def refund(self, ref: str) -> None:
         self.refunds.append(ref)

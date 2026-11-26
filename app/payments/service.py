@@ -22,14 +22,17 @@ from app.core.errors import (
     DomainError,
     HoldExpired,
     IdempotencyConflict,
+    PaymentAlreadyResolved,
     PaymentInProgress,
     RequestInProgress,
     ReservationNotCancellable,
     ReservationNotFound,
     ReservationNotPayable,
+    SeatLost,
     TripAlreadyDeparted,
 )
-from app.payments.gateway import ChargeResult, GatewayStatus, PaymentGateway, Scenario
+from app.payments.delivery import deliver_seat
+from app.payments.gateway import GatewayStatus, PaymentGateway, Scenario
 from app.payments.models import IdempotencyKey, Payment, PaymentStatus
 
 # How long a hold is guaranteed to survive once a payment has started.
@@ -60,7 +63,8 @@ def pay_reservation(
     """Charge a held reservation once, however many times the request is sent.
 
     A: register the key, lock the reservation, extend the hold, record a pending
-       payment, commit. Any domain error here rolls everything back, key included.
+       payment with its gateway reference, commit. Any domain error here rolls
+       everything back, key included.
     Gateway: called with no transaction open and no lock held.
     B: record the outcome, mark the reservation paid if approved, save the
        response under the key, commit.
@@ -70,20 +74,23 @@ def pay_reservation(
     settles it later).
     """
     request_hash = _request_hash(reservation_id, scenario)
+    gateway_ref = gateway.new_reference(scenario)
 
     try:
         replay = _register_key(session, user_id, idempotency_key, request_hash)
         if replay is not None:
             return replay
-        payment_id, amount_cents = _prepare_payment(session, clock, user_id, reservation_id)
+        payment_id, amount_cents = _prepare_payment(
+            session, clock, user_id, reservation_id, gateway_ref
+        )
     except DomainError:
         session.rollback()
         raise
     session.commit()
 
-    result = gateway.charge(amount_cents, scenario)
+    gateway_status = gateway.charge(gateway_ref, amount_cents)
 
-    return _settle(session, user_id, idempotency_key, reservation_id, payment_id, result)
+    return _settle(session, user_id, idempotency_key, reservation_id, payment_id, gateway_status)
 
 
 def _request_hash(reservation_id: int, scenario: Scenario) -> str:
@@ -131,7 +138,7 @@ def _register_key(
 
 
 def _prepare_payment(
-    session: Session, clock: Clock, user_id: int, reservation_id: int
+    session: Session, clock: Clock, user_id: int, reservation_id: int, gateway_ref: str
 ) -> tuple[int, int]:
     """Lock the reservation, extend its hold and record a pending payment.
 
@@ -164,7 +171,12 @@ def _prepare_payment(
         raise HoldExpired
     reservation.expires_at = max(reservation.expires_at, new_expiry)
 
-    payment = Payment(reservation_id=reservation.id, amount_cents=reservation.price_cents)
+    payment = Payment(
+        reservation_id=reservation.id,
+        amount_cents=reservation.price_cents,
+        gateway_ref=gateway_ref,
+        created_at=now,
+    )
     session.add(payment)
     session.flush()
     return payment.id, reservation.price_cents
@@ -176,32 +188,45 @@ def _settle(
     key: str,
     reservation_id: int,
     payment_id: int,
-    result: ChargeResult,
+    gateway_status: GatewayStatus,
 ) -> PaymentResponse:
-    """Transaction B: record what the gateway said and save the response under the key."""
-    status_code, payment_status = _OUTCOMES[result.status]
-    paid = result.status == GatewayStatus.APPROVED
+    """Transaction B: record what the gateway said and save the response under the key.
+
+    The payment is updated only if it is still pending. Time passed since transaction A,
+    and the reconciliation may have resolved this payment, even refunded it: then this
+    request writes nothing and answers 409. If the payment is approved but the seat is no
+    longer ours (someone took the legs after the hold ran out), the payment stays
+    approved, the reservation expires, the answer is 409 and the reconciliation refunds it.
+    """
+    status_code, payment_status = _OUTCOMES[gateway_status]
+    resolved = session.execute(
+        update(Payment)
+        .where(Payment.id == payment_id, Payment.status == PaymentStatus.PENDING)
+        .values(status=payment_status)
+    )
+    if resolved.rowcount == 0:
+        return _save_response(session, user_id, key, *_error_response(PaymentAlreadyResolved))
+
+    paid = gateway_status == GatewayStatus.APPROVED
+    if paid and not deliver_seat(session, reservation_id):
+        return _save_response(session, user_id, key, *_error_response(SeatLost))
+
     reservation_status = ReservationStatus.PAID if paid else ReservationStatus.HELD
     body = {
         "payment_id": payment_id,
         "status": payment_status.value,
         "reservation_status": reservation_status.value,
     }
+    return _save_response(session, user_id, key, status_code, body)
 
-    session.execute(
-        update(Payment)
-        .where(Payment.id == payment_id)
-        .values(status=payment_status, gateway_ref=result.ref)
-    )
-    if paid:
-        session.execute(
-            update(Reservation)
-            .where(Reservation.id == reservation_id)
-            .values(status=ReservationStatus.PAID)
-        )
-        session.execute(
-            update(SeatLeg).where(SeatLeg.reservation_id == reservation_id).values(expires_at=None)
-        )
+
+def _error_response(error: type[DomainError]) -> tuple[int, dict]:
+    return error.status_code, {"code": error.code, "message": error.message}
+
+
+def _save_response(
+    session: Session, user_id: int, key: str, status_code: int, body: dict
+) -> PaymentResponse:
     session.execute(
         update(IdempotencyKey)
         .where(IdempotencyKey.user_id == user_id, IdempotencyKey.key == key)

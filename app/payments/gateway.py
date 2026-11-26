@@ -1,7 +1,6 @@
 """Gateway de pagamento: interface e simulador sem estado."""
 
 import uuid
-from dataclasses import dataclass
 from enum import StrEnum
 from typing import Protocol
 
@@ -26,14 +25,10 @@ class UnknownCharge(Exception):
     """A referência não foi emitida por este gateway (ou está malformada)."""
 
 
-@dataclass(frozen=True)
-class ChargeResult:
-    status: GatewayStatus
-    ref: str
-
-
 class PaymentGateway(Protocol):
-    def charge(self, amount_cents: int, scenario: Scenario) -> ChargeResult: ...
+    def new_reference(self, scenario: Scenario) -> str: ...
+
+    def charge(self, ref: str, amount_cents: int) -> GatewayStatus: ...
 
     def get_status(self, ref: str) -> GatewayStatus: ...
 
@@ -44,16 +39,23 @@ class SimulatedGateway:
     """Simulador sem estado: tudo que precisa saber vai dentro da gateway_ref.
 
     Formato da ref: sim-<scenario>-<epoch>-<uuid hex>
+
+    Quem cobra cria a referência antes (new_reference), guarda e só então chama
+    charge(ref, ...). Assim a cobrança sempre pode ser consultada depois, mesmo que
+    o processo caia logo após o charge. O delay conta a partir da criação da ref.
     """
 
     def __init__(self, clock: Clock, delay_seconds: int = 30) -> None:
         self._clock = clock
         self._delay_seconds = delay_seconds
 
-    def charge(self, amount_cents: int, scenario: Scenario) -> ChargeResult:
+    def new_reference(self, scenario: Scenario) -> str:
         epoch = int(self._clock.now().timestamp())
-        ref = f"sim-{scenario.value}-{epoch}-{uuid.uuid4().hex}"
-        return ChargeResult(status=self.get_status(ref), ref=ref)
+        return f"sim-{scenario.value}-{epoch}-{uuid.uuid4().hex}"
+
+    def charge(self, ref: str, amount_cents: int) -> GatewayStatus:
+        # Sem estado e sem dinheiro de verdade: cobrar a mesma ref de novo dá a mesma resposta.
+        return self.get_status(ref)
 
     def get_status(self, ref: str) -> GatewayStatus:
         scenario, epoch = self._parse(ref)

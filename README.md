@@ -49,7 +49,7 @@ flowchart LR
         BK --> K
     end
 
-    X["expirer<br/>separate process, every 30 s"] --> K
+    X["worker<br/>separate process, every 30 s"] --> K
     K --> P[("PostgreSQL 16")]
     R[("Redis 7<br/>not used yet")] -.->|"Phase 5"| A
 ```
@@ -127,10 +127,10 @@ The seed can be run more than once.
 uvicorn app.main:app --reload
 ```
 
-**4b. Run the hold expirer** (optional, in another terminal with the virtualenv active). Seats are freed on time without it; it only cleans up expired reservations.
+**4b. Run the worker** (optional, in another terminal with the virtualenv active). Seats are freed on time without it; it cleans up expired reservations, reconciles payments that were left pending and purges idempotency keys older than 24 hours.
 
 ```bash
-python -m app.booking.expirer
+python -m app.worker
 ```
 
 **5. Run the front end**, in another terminal. The dev server proxies `/api` to the API on port 8000.
