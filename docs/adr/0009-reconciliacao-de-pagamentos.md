@@ -1,7 +1,7 @@
 # ADR 0009: Reconciliação de pagamentos no processo do worker
 
 - Status: aceito
-- Data: 2026-11-26 (Tasks 42 e 43 da Fase 3)
+- Data: 2026-11-26 (Tasks 42 a 44 da Fase 3)
 
 ## Contexto
 
@@ -44,6 +44,14 @@ uma rotina que compare o banco com o gateway e feche as pontas.
   expiração dos holds. `app/worker.py` (`python -m app.worker`) monta as tarefas e as
   entrega ao laço de `app/booking/expirer.py` como `Task(name, run)`. O `booking` não
   importa `payments`: só o worker conhece os dois módulos.
+- **O passo B do `pay` também se protege.** Entre a cobrança e o passo B passa tempo, e a
+  reconciliação pode ter resolvido o mesmo pagamento. O passo B faz
+  `UPDATE payments SET status = ... WHERE id = ... AND status = 'pending'`: se nenhuma
+  linha muda, o pedido não escreve nada e responde `409 payment_already_resolved`. Se o
+  pagamento foi aprovado, o assento é entregue pela mesma `deliver_seat` da reconciliação;
+  se as pernas já são de outro comprador, o pagamento fica `approved`, a reserva vira
+  `expired` e o pedido responde `409 seat_lost` (a segunda fase da reconciliação estorna). As duas respostas são
+  guardadas na `Idempotency-Key`, então um replay devolve o mesmo 409.
 - **Limpeza de chaves.** Uma segunda tarefa apaga `idempotency_keys` com mais de 24 h
   (`created_at` estritamente menor que agora menos 24 h), concluídas ou ainda "em
   andamento".
@@ -80,8 +88,8 @@ uma rotina que compare o banco com o gateway e feche as pontas.
 - **Limitação:** a reconciliação não toca em `idempotency_keys`. Uma chave "em andamento"
   de uma requisição que caiu continua respondendo 409 até a limpeza de 24 h; o cliente
   descobre o estado por `GET /api/reservations/{id}`.
-- **Limitação:** o passo B do `pay` (`_settle`) ainda não tem `WHERE status = 'pending'`.
-  Um pedido original lento (mais de 45 s) poderia gravar o resultado por cima de uma
-  reconciliação que já resolveu o pagamento. A correção, e a decisão do que o pedido
-  original devolve nesse caso, ficam para depois, com teste.
+- O pedido lento que chega ao passo B depois da reconciliação recebe 409 mesmo quando o
+  resultado foi bom (a reconciliação confirmou a venda). O cliente descobre o estado real
+  por `GET /api/reservations/{id}`. Foi a escolha mais simples e honesta: nenhum estado
+  novo mapeado para status HTTP.
 - Gateway simulado: nada é cobrado nem devolvido de verdade.
