@@ -1,13 +1,10 @@
-"""Background process that expires overdue seat holds.
+"""Loop that expires overdue seat holds and runs extra tasks after each expiration.
 
-Run it next to the API:  python -m app.booking.expirer
-
-The loop can also run extra tasks after each expiration (see Task). The booking
-module knows nothing about what they do: app.worker wires in the payments jobs.
+The process entry point is app.worker (python -m app.worker). The booking module
+knows nothing about what the extra tasks do: app.worker wires in the payments jobs.
 """
 
 import logging
-import signal
 import threading
 import time
 from collections.abc import Callable, Sequence
@@ -17,8 +14,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.booking.service import expire_holds
-from app.core.clock import Clock, SystemClock
-from app.core.db import SessionLocal
+from app.core.clock import Clock
 
 INTERVAL_SECONDS = 30.0
 BATCH_SIZE = 100
@@ -97,17 +93,3 @@ def run_expirer(
             _run_task(task, interval)
         _wait(stop, interval)
     logger.info("hold expirer stopped")
-
-
-def main() -> None:
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
-    )
-    stop = threading.Event()
-    for signum in (signal.SIGINT, signal.SIGTERM):
-        signal.signal(signum, lambda *_: stop.set())
-    run_expirer(SessionLocal, SystemClock(), stop)
-
-
-if __name__ == "__main__":
-    main()
