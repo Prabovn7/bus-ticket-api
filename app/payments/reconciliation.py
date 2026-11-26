@@ -16,12 +16,12 @@ reconcilers, or a reconciler and a request that is still cancelling, may both ca
 from dataclasses import dataclass
 from datetime import timedelta
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
-from app.booking.legs import legs_for
-from app.booking.models import Reservation, ReservationStatus, SeatLeg
+from app.booking.models import Reservation, ReservationStatus
 from app.core.clock import Clock
+from app.payments.delivery import deliver_seat
 from app.payments.gateway import GatewayStatus, PaymentGateway
 from app.payments.models import Payment, PaymentStatus
 
@@ -99,36 +99,9 @@ def _apply(session: Session, payment_id: int, gateway_status: GatewayStatus) -> 
         payment.status = PaymentStatus.DECLINED
     else:
         payment.status = PaymentStatus.APPROVED
-        _deliver_seat(session, payment.reservation_id)
+        deliver_seat(session, payment.reservation_id)
     session.commit()
     return True
-
-
-def _deliver_seat(session: Session, reservation_id: int) -> None:
-    """The money is in: give the seat to the reservation if it is still ours.
-
-    If the legs were taken by someone else, the reservation cannot be completed. It is
-    marked expired, and the payment, now approved on an unpaid reservation, is refunded
-    by the second phase. Legs that belong to someone else are never touched.
-    """
-    reservation = session.scalar(
-        select(Reservation).where(Reservation.id == reservation_id).with_for_update()
-    )
-    if reservation.status != ReservationStatus.HELD:
-        return  # expired or cancelled already: its legs are gone, nothing to deliver
-
-    legs = legs_for(reservation.origin_position, reservation.destination_position)
-    attempt = session.begin_nested()  # a SAVEPOINT: all legs or none
-    owned = session.execute(
-        update(SeatLeg).where(SeatLeg.reservation_id == reservation.id).values(expires_at=None)
-    )
-    if owned.rowcount == len(legs):
-        attempt.commit()
-        reservation.status = ReservationStatus.PAID
-    else:
-        attempt.rollback()  # leave the legs exactly as they were
-        session.execute(delete(SeatLeg).where(SeatLeg.reservation_id == reservation.id))
-        reservation.status = ReservationStatus.EXPIRED
 
 
 def _refund_owed(session: Session, gateway: PaymentGateway, batch_size: int) -> int:
