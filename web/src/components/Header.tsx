@@ -40,6 +40,9 @@ function Header() {
           <NavLink to="/" end>
             Buscar
           </NavLink>
+          {status === 'authenticated' ? (
+            <NavLink to="/minhas-reservas">Minhas reservas</NavLink>
+          ) : null}
           {status === 'anonymous' ? (
             <>
               <NavLink to="/entrar">Entrar</NavLink>

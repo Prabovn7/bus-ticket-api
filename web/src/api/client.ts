@@ -3,12 +3,15 @@ import type { ApiError } from './types'
 export class ApiRequestError extends Error {
   readonly status: number
   readonly code: string
+  /** O JSON da resposta de erro, ou null se não havia JSON (ou se a rede falhou). */
+  readonly body: unknown
 
-  constructor(status: number, code: string, message: string) {
+  constructor(status: number, code: string, message: string, body: unknown = null) {
     super(message)
     this.name = 'ApiRequestError'
     this.status = status
     this.code = code
+    this.body = body
   }
 }
 
@@ -42,12 +45,22 @@ async function toRequestError(response: Response): Promise<ApiRequestError> {
   }
 
   if (isDomainError(body)) {
-    return new ApiRequestError(response.status, body.code, body.message)
+    return new ApiRequestError(response.status, body.code, body.message, body)
   }
   if (hasValidationDetail(body)) {
-    return new ApiRequestError(response.status, 'validation_error', 'Confira os dados informados.')
+    return new ApiRequestError(
+      response.status,
+      'validation_error',
+      'Confira os dados informados.',
+      body,
+    )
   }
-  return new ApiRequestError(response.status, 'unknown_error', 'Algo deu errado. Tente de novo.')
+  return new ApiRequestError(
+    response.status,
+    'unknown_error',
+    'Algo deu errado. Tente de novo.',
+    body,
+  )
 }
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {

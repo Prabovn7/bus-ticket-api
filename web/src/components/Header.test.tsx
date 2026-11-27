@@ -46,6 +46,19 @@ describe('Header', () => {
     expect(screen.queryByRole('link', { name: 'Criar conta' })).not.toBeInTheDocument()
   })
 
+  it('autenticado: mostra o link Minhas reservas', () => {
+    renderHeader(fakeAuth({ status: 'authenticated', user: ana }))
+    expect(screen.getByRole('link', { name: 'Minhas reservas' })).toHaveAttribute(
+      'href',
+      '/minhas-reservas',
+    )
+  })
+
+  it.each(['anonymous', 'loading'] as const)('%s: não mostra o link Minhas reservas', (status) => {
+    renderHeader(fakeAuth({ status }))
+    expect(screen.queryByRole('link', { name: 'Minhas reservas' })).not.toBeInTheDocument()
+  })
+
   it('nome com HTML aparece como texto', () => {
     const name = '<script>alert(1)</script>'
     const { container } = renderHeader(

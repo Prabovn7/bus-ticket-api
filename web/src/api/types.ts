@@ -64,3 +64,36 @@ export interface Hold {
   expires_at: string // ISO 8601, em UTC
   expires_in_seconds: number // segundos que faltam, pelo relógio do servidor
 }
+
+/**
+ * Um item de GET /api/reservations: a reserva com o estado do pagamento.
+ * Hold vencido já vem como 'expired' (o servidor deriva pelo relógio).
+ */
+export interface Reservation {
+  id: number
+  trip_id: number
+  seat_number: number
+  origin_position: number
+  destination_position: number
+  status: string
+  price_cents: number
+  expires_at: string | null // ISO 8601, em UTC
+  expires_in_seconds: number | null // segundos que faltam; null se não houver prazo
+  payment_status: string | null
+}
+
+/** Cenário do gateway simulado, escolhido no modo demonstração. */
+export type PayScenario = 'approve' | 'decline' | 'delay'
+
+/** Resultado de um pagamento: o corpo de 200 (approved), 202 (pending) e 402 (declined). */
+export interface Payment {
+  payment_id: number
+  status: string
+  reservation_status: string
+}
+/** Resposta de POST /api/reservations/{id}/cancel. refund_status: none, pending ou refunded. */
+export interface CancelResult {
+  reservation_id: number
+  status: string
+  refund_status: string
+}

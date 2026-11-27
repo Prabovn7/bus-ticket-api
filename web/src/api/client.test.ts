@@ -81,4 +81,29 @@ describe('apiFetch', () => {
     expect(error).not.toBeInstanceOf(ApiRequestError)
     expect(error).toMatchObject({ name: 'AbortError' })
   })
+
+  it('guarda o corpo de uma resposta de erro que não é {code, message} (a recusa 402)', async () => {
+    const declined = { payment_id: 9, status: 'declined', reservation_status: 'held' }
+    mockFetch(() => Promise.resolve(jsonResponse(declined, 402)))
+    const error = await apiFetch('/api/reservations/31/pay').catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ApiRequestError)
+    expect(error).toMatchObject({ status: 402, code: 'unknown_error', body: declined })
+  })
+
+  it('guarda também o corpo do erro de domínio', async () => {
+    const domain = { code: 'city_not_found', message: 'Cidade não encontrada.' }
+    mockFetch(() => Promise.resolve(jsonResponse(domain, 404)))
+    const error = await apiFetch('/api/trips').catch((e: unknown) => e)
+    expect(error).toMatchObject({ status: 404, code: 'city_not_found', body: domain })
+  })
+
+  it('o corpo é null quando a resposta de erro não tem JSON ou a rede falha', async () => {
+    mockFetch(() => Promise.resolve(new Response('Internal Server Error', { status: 500 })))
+    const noJson = await apiFetch('/api/cities').catch((e: unknown) => e)
+    expect(noJson).toMatchObject({ status: 500, body: null })
+
+    mockFetch(() => Promise.reject(new TypeError('Failed to fetch')))
+    const offline = await apiFetch('/api/cities').catch((e: unknown) => e)
+    expect(offline).toMatchObject({ status: 0, body: null })
+  })
 })

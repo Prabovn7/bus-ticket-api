@@ -1,0 +1,148 @@
+/* Página de pagamento: o painel, o modo demonstração, o Pix simulado e a viagem confirmada.
+   Só tokens de cor, sem animação. Carregado depois de busca.css e holo.css (o último vence). */
+
+.pagamento {
+  display: grid;
+  gap: 1rem;
+}
+
+.pagamento p {
+  margin: 0;
+}
+
+.pagamento time {
+  color: var(--ambar);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* Pix simulado: borda tracejada e selo mostram que não é um pagamento de verdade. */
+.pix {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 2px dashed var(--quadro-mudo);
+  border-radius: 0.5rem;
+  background: var(--quadro-2);
+  color: var(--quadro-texto);
+}
+
+.pix p {
+  margin: 0;
+}
+
+.pix-selo {
+  justify-self: start;
+  padding: 0.125rem 0.625rem;
+  border-radius: 999px;
+  background: var(--ambar);
+  color: var(--sobre-ambar);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pix-codigo {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  background: var(--quadro);
+  color: var(--quadro-mudo);
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 0.875rem;
+  letter-spacing: 0.08em;
+  overflow-wrap: anywhere;
+  user-select: none;
+}
+
+/* Painel de pagar e modo demonstração. */
+.pay {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.pay-demo {
+  min-width: 0;
+  margin: 0;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--quadro-linha);
+  border-radius: 0.5rem;
+}
+
+.pay-demo legend {
+  padding: 0 0.5rem;
+  color: var(--quadro-mudo);
+  font-weight: 700;
+}
+
+.pay-opcao {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+/* Radio desenhado aqui: o do navegador muda de um navegador para outro e some no escuro.
+   Continua um <input type="radio"> de verdade (foco, teclado e leitor de tela). */
+.pay-opcao input {
+  display: grid;
+  flex: none;
+  place-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  margin: 0;
+  border: 2px solid var(--quadro-mudo);
+  border-radius: 50%;
+  background: transparent;
+  appearance: none;
+}
+
+.pay-opcao input::before {
+  display: none;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: var(--ambar);
+  content: '';
+}
+
+.pay-opcao input:checked {
+  border-color: var(--ambar);
+}
+
+.pay-opcao input:checked::before {
+  display: block;
+}
+
+.pay-opcao input:disabled {
+  opacity: 0.6;
+}
+
+.pay-demo:disabled .pay-opcao {
+  cursor: not-allowed;
+}
+
+.pay-aviso {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-left: 4px solid var(--ambar);
+  background: var(--quadro-2);
+  color: var(--quadro-texto);
+  font-weight: 700;
+}
+
+.pay .botao {
+  justify-self: start;
+}
+
+/* Viagem confirmada: o conteúdo do cartão holográfico. */
+.confirmada {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.confirmada h2 {
+  margin: 0;
+  color: var(--ambar);
+}

@@ -9,6 +9,7 @@ import ErrorMessage from '../components/ErrorMessage'
 import HeroScene from '../components/HeroScene'
 import HoldPanel from '../components/HoldPanel'
 import SeatGrid from '../components/SeatGrid'
+import { useActiveHold } from '../hooks/useActiveHold'
 import { useCountdown } from '../hooks/useCountdown'
 import { useSeatMap } from '../hooks/useSeatMap'
 
@@ -37,7 +38,11 @@ function SeatPicker({ tripId }: { tripId: number }) {
   // O estado só muda na próxima renderização; o ref bloqueia um segundo envio no mesmo instante.
   const sending = useRef(false)
   const request = useRef<AbortController | null>(null)
-  const seconds = useCountdown(hold)
+  const resumed = useActiveHold(tripId, status === 'authenticated')
+  const [dismissedId, setDismissedId] = useState<number | null>(null)
+  // O hold da tela: o que a pessoa acabou de criar ou o que o servidor devolveu ao carregar.
+  const active = hold ?? (resumed.hold && resumed.hold.id !== dismissedId ? resumed.hold : null)
+  const seconds = useCountdown(active)
 
   // Sair da página no meio da reserva cancela o pedido.
   useEffect(() => {
@@ -87,6 +92,8 @@ function SeatPicker({ tripId }: { tripId: number }) {
   }
 
   function chooseAnother() {
+    // O hold retomado continuaria vindo do servidor: guardamos o id para não mostrá-lo de novo.
+    setDismissedId(active?.id ?? null)
     setHold(null)
     setSelected(null)
     setNotice(null)
@@ -98,9 +105,9 @@ function SeatPicker({ tripId }: { tripId: number }) {
     setNotice(null)
   }
 
-  if (hold && seconds !== null) {
+  if (active && seconds !== null) {
     return seconds > 0 ? (
-      <HoldPanel hold={hold} seconds={seconds} />
+      <HoldPanel hold={active} seconds={seconds} />
     ) : (
       <div className="quadro quadro-estado">
         <ErrorMessage>Sua reserva expirou.</ErrorMessage>
@@ -110,7 +117,7 @@ function SeatPicker({ tripId }: { tripId: number }) {
       </div>
     )
   }
-  if (state.status === 'loading') {
+  if (state.status === 'loading' || !resumed.ready) {
     return <p role="status">Carregando assentos</p>
   }
   if (state.status === 'error') {

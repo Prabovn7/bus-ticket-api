@@ -4,6 +4,55 @@ All notable changes to this project are documented here, one block per phase.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-11-27
+
+Phase 3: idempotent payment with a simulated gateway, cancellation, reconciliation, and the
+checkout and My reservations pages.
+
+### Added
+
+- Tables `payments` and `idempotency_keys` (migration `add_payments_and_idempotency_keys`).
+  `idempotency_keys` has `PRIMARY KEY (user_id, key)`, so the same key sent twice, even at the
+  same moment, can create only one row ([ADR 0007](docs/adr/0007-idempotencia-de-pagamento-no-postgresql.md)).
+- A programmable simulated gateway behind the `PaymentGateway` interface (approve, decline or
+  leave under review). It is injected like the `Clock`, so tests program it instead of sleeping.
+- `POST /api/reservations/{id}/pay`, with the `Idempotency-Key` header: a short transaction A, the
+  gateway call outside any transaction, then a short transaction B guarded by
+  `WHERE status = 'pending'`. Responses: `200` approved, `402` declined (the reservation stays
+  held), `202` under review. Errors: `409 reservation_not_payable`, `410 hold_expired`,
+  `422 idempotency_key_reused`, `409 request_in_progress`, `409 payment_already_resolved` and
+  `409 seat_lost` (approved but the seat had gone to someone else, so it is refunded).
+- `GET /api/reservations` (up to 50, newest first) and `GET /api/reservations/{id}`, both limited
+  to the owner.
+- `POST /api/reservations/{id}/cancel`: cancels a held or paid reservation until the trip departs,
+  frees the seat and refunds a paid one in full. Two simultaneous cancellations make one refund,
+  because the guarantee comes from the reservation state under `FOR UPDATE`, not from a key
+  ([ADR 0008](docs/adr/0008-cancelamento-e-estornos.md)).
+- Reconciliation in the worker: payments left `pending` for at least 45 seconds are settled by
+  asking the gateway (deliver the seat or refund), and refunds that failed during a cancellation
+  are retried ([ADR 0009](docs/adr/0009-reconciliacao-de-pagamentos.md)).
+- Cleanup of idempotency keys older than 24 hours.
+- Front end: the hold is resumed after a page reload, a checkout page with a simulated Pix code
+  and a demo mode that picks the gateway outcome, a My reservations page (status badges, a link
+  to pay, an inline cancel confirmation) and a header link to it. Screenshots in `docs/img/`.
+- Tests: the same `Idempotency-Key` sent at the same moment makes one charge, two simultaneous
+  cancellations make one refund, a process that dies between the charge and the confirmation is
+  settled by the reconciliation, and the front-end checkout and My reservations flows.
+  288 backend tests and 510 front-end tests.
+
+### Changed
+
+- The process to run next to the API is now `python -m app.worker`. It keeps the expiry loop and
+  adds the two payment jobs (reconcile payments, purge old keys). `python -m app.booking.expirer`
+  remains the loop itself.
+- The README (English and Portuguese) documents the new endpoints, the worker, the screenshots and
+  the Phase 3 limitations, and drops the Phase 2 limitations that this phase fixed (no way to
+  cancel or pay, no way to resume a hold).
+
+### Known limitations
+
+See "Limitations and next steps" in the [README](README.md), section "Payments and reservations".
+
 ## [0.2.0] - 2026-11-02
 
 Phase 2: seat holds, with the database deciding who gets a seat.
