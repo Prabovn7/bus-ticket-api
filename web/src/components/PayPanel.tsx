@@ -93,11 +93,11 @@ function PayPanel({ reservationId, onApproved, onPending, onEnded }: PayPanelPro
   }
 
   return (
-    <div>
-      <fieldset disabled={pending}>
+    <div className="pay">
+      <fieldset className="pay-demo" disabled={pending}>
         <legend>Modo demonstração</legend>
         {SCENARIOS.map(({ value, label }) => (
-          <label key={value}>
+          <label key={value} className="pay-opcao">
             <input
               type="radio"
               name="cenario"
@@ -109,7 +109,11 @@ function PayPanel({ reservationId, onApproved, onPending, onEnded }: PayPanelPro
           </label>
         ))}
       </fieldset>
-      {declined ? <p role="status">Pagamento recusado.</p> : null}
+      {declined ? (
+        <p className="pay-aviso" role="status">
+          Pagamento recusado.
+        </p>
+      ) : null}
       {notice ? <ErrorMessage>{notice}</ErrorMessage> : null}
       <button type="button" className="botao" disabled={pending} onClick={() => void submit()}>
         {pending ? 'Pagando…' : 'Pagar'}

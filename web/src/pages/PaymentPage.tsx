@@ -43,7 +43,7 @@ function HeldReservation({ reservation, onApproved, onPending, onEnded }: HeldRe
     return <ReservationEnded tripId={reservation.trip_id} message="Sua reserva expirou." />
   }
   return (
-    <div className="quadro">
+    <div className="quadro pagamento">
       <p>Assento: {reservation.seat_number}</p>
       <p>Valor: {formatBRL(reservation.price_cents)}</p>
       <p>

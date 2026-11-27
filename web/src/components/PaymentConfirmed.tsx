@@ -10,10 +10,12 @@ interface PaymentConfirmedProps {
 function PaymentConfirmed({ seatNumber, priceCents }: PaymentConfirmedProps) {
   return (
     <HoloCard>
-      <h2>Viagem confirmada</h2>
-      <p role="status">Pagamento aprovado.</p>
-      <p>Assento: {seatNumber}</p>
-      <p>Valor: {formatBRL(priceCents)}</p>
+      <div className="confirmada">
+        <h2>Viagem confirmada</h2>
+        <p role="status">Pagamento aprovado.</p>
+        <p>Assento: {seatNumber}</p>
+        <p>Valor: {formatBRL(priceCents)}</p>
+      </div>
     </HoloCard>
   )
 }
