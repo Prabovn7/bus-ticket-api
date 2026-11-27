@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { tokenStore } from '../auth/tokenStore'
 import { jsonResponse } from '../test/http'
-import { getReservation, listReservations } from './reservations'
+import { cancelReservation, getReservation, listReservations } from './reservations'
 import type { Reservation } from './types'
 
 const reservation: Reservation = {
@@ -103,5 +103,66 @@ describe('getReservation', () => {
       status: 404,
       code: 'reservation_not_found',
     })
+  })
+})
+
+describe('cancelReservation', () => {
+  const cancelled = { reservation_id: 31, status: 'cancelled', refund_status: 'refunded' }
+
+  beforeEach(() => {
+    tokenStore.clear()
+  })
+
+  it('faz POST em /api/reservations/{id}/cancel com o token e devolve o resultado', async () => {
+    tokenStore.set('token-a')
+    const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(jsonResponse(cancelled)))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(cancelReservation(31)).resolves.toEqual(cancelled)
+
+    const [url, init] = fetchMock.mock.calls[0] ?? []
+    expect(url).toBe('/api/reservations/31/cancel')
+    expect(init?.method).toBe('POST')
+    expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer token-a')
+  })
+
+  it('não manda Idempotency-Key nem corpo: o servidor decide pelo estado da reserva', async () => {
+    tokenStore.set('token-a')
+    const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(jsonResponse(cancelled)))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await cancelReservation(31)
+
+    const init = fetchMock.mock.calls[0]?.[1]
+    expect(new Headers(init?.headers).has('Idempotency-Key')).toBe(false)
+    expect(init?.body).toBeUndefined()
+  })
+
+  it('repassa o AbortSignal para o fetch', async () => {
+    tokenStore.set('token-a')
+    const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(jsonResponse(cancelled)))
+    vi.stubGlobal('fetch', fetchMock)
+    const controller = new AbortController()
+
+    await cancelReservation(31, controller.signal)
+
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).toBe(controller.signal)
+  })
+
+  it.each([
+    [404, 'reservation_not_found'],
+    [409, 'reservation_not_cancellable'],
+    [409, 'trip_already_departed'],
+    [409, 'payment_in_progress'],
+  ])('deixa o ApiRequestError %i %s passar', async (status, code) => {
+    tokenStore.set('token-a')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>(() =>
+        Promise.resolve(jsonResponse({ code, message: 'Mensagem.' }, status)),
+      ),
+    )
+
+    await expect(cancelReservation(31)).rejects.toMatchObject({ status, code })
   })
 })
