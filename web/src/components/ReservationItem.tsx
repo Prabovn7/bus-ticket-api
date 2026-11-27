@@ -49,6 +49,7 @@ function ReservationItem({ reservation }: ReservationItemProps) {
 
   const status = result ? 'cancelled' : reservation.status
   const canCancel = CANCELLABLE.includes(status)
+  const hasActions = status === 'held' || (canCancel && !asking)
 
   function back() {
     returnFocus.current = true
@@ -71,30 +72,58 @@ function ReservationItem({ reservation }: ReservationItemProps) {
   }
 
   return (
-    <li>
-      <p>Assento {reservation.seat_number}</p>
-      <p>Viagem {reservation.trip_id}</p>
-      <p>{formatBRL(reservation.price_cents)}</p>
-      <p>{STATUS_LABELS[status] ?? status}</p>
-      {status === 'held' ? <Link to={`/reservas/${reservation.id}/pagamento`}>Pagar</Link> : null}
-      {canCancel && !asking ? (
-        <button type="button" ref={cancelButton} onClick={() => setAsking(true)}>
-          Cancelar reserva
-        </button>
+    <li className="reserva">
+      <p className="reserva-assento">Assento {reservation.seat_number}</p>
+      <p className="reserva-viagem">Viagem {reservation.trip_id}</p>
+      <p className="reserva-preco">{formatBRL(reservation.price_cents)}</p>
+      <p className={`reserva-status reserva-status-${status}`}>{STATUS_LABELS[status] ?? status}</p>
+      {hasActions ? (
+        <div className="reserva-acoes">
+          {status === 'held' ? (
+            <Link className="botao" to={`/reservas/${reservation.id}/pagamento`}>
+              Pagar
+            </Link>
+          ) : null}
+          {canCancel && !asking ? (
+            <button
+              type="button"
+              className="reserva-botao reserva-botao-cancelar"
+              ref={cancelButton}
+              onClick={() => setAsking(true)}
+            >
+              Cancelar reserva
+            </button>
+          ) : null}
+        </div>
       ) : null}
       {asking ? (
-        <div>
+        <div className="reserva-confirmacao">
           <p>Cancelar a reserva do assento {reservation.seat_number}?</p>
-          <button type="button" disabled={cancelling} onClick={() => void confirm()}>
-            {cancelling ? 'Cancelando…' : 'Confirmar cancelamento'}
-          </button>
-          <button type="button" autoFocus disabled={cancelling} onClick={back}>
-            Voltar
-          </button>
+          <div className="reserva-acoes">
+            <button
+              type="button"
+              className="reserva-botao reserva-botao-perigo"
+              disabled={cancelling}
+              onClick={() => void confirm()}
+            >
+              {cancelling ? 'Cancelando…' : 'Confirmar cancelamento'}
+            </button>
+            <button
+              type="button"
+              className="reserva-botao reserva-botao-voltar"
+              autoFocus
+              disabled={cancelling}
+              onClick={back}
+            >
+              Voltar
+            </button>
+          </div>
         </div>
       ) : null}
       {notice ? <ErrorMessage>{notice}</ErrorMessage> : null}
-      <p role="status">{result ? cancelledMessage(result.refund_status) : ''}</p>
+      <p role="status" className="reserva-aviso">
+        {result ? cancelledMessage(result.refund_status) : ''}
+      </p>
     </li>
   )
 }

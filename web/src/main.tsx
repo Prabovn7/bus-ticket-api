@@ -14,6 +14,7 @@ import './styles/holo.css'
 import './styles/cena.css'
 import './styles/assentos.css'
 import './styles/pagamento.css'
+import './styles/reservas.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -26,7 +26,7 @@ function ReservationList() {
     )
   }
   return (
-    <ul aria-label="Suas reservas">
+    <ul className="reservas" aria-label="Suas reservas">
       {state.reservations.map((reservation) => (
         <ReservationItem key={reservation.id} reservation={reservation} />
       ))}
