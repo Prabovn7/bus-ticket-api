@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import type { Hold } from '../api/types'
 import { formatBRL, formatCountdown } from '../lib/formatting'
 
@@ -10,6 +11,7 @@ interface HoldPanelProps {
  * A reserva feita: qual assento, quanto custa e quanto tempo falta.
  * O aviso do assento é um status (anunciado uma vez); o timer muda a cada segundo e
  * por isso não é uma região viva: um leitor de tela o leria sem parar.
+ * O link leva ao pagamento: é um link (e não um botão) porque navega para outro endereço.
  */
 function HoldPanel({ hold, seconds }: HoldPanelProps) {
   return (
@@ -23,6 +25,9 @@ function HoldPanel({ hold, seconds }: HoldPanelProps) {
         </time>
       </p>
       <p>Se o tempo acabar, o assento volta a ficar livre para outras pessoas.</p>
+      <Link className="botao botao-quadro" to={`/reservas/${hold.id}/pagamento`}>
+        Ir para o pagamento
+      </Link>
     </div>
   )
 }
