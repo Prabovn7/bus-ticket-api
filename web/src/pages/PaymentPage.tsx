@@ -2,6 +2,7 @@ import { Navigate, useLocation, useParams } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import BoardState from '../components/BoardState'
 import HeroScene from '../components/HeroScene'
+import PayPanel from '../components/PayPanel'
 import { useReservation } from '../hooks/useReservation'
 import { formatBRL } from '../lib/formatting'
 
@@ -39,6 +40,7 @@ function ReservationSummary({ reservationId }: { reservationId: number }) {
     <div className="quadro">
       <p>Assento: {reservation.seat_number}</p>
       <p>Valor: {formatBRL(reservation.price_cents)}</p>
+      <PayPanel reservationId={reservation.id} />
     </div>
   )
 }
