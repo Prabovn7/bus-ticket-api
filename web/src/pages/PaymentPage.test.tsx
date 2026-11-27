@@ -1,30 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it } from 'vitest'
-import type { Reservation, User } from '../api/types'
 import { routes } from '../router'
 import { authWrapper, fakeAuth } from '../test/auth'
 import { controllableFetch, jsonResponse, stubRoutes } from '../test/http'
+import { ME, reservationOf } from '../test/payment'
 
-const user: User = { id: 1, email: 'ana@exemplo.com', name: 'Ana' }
-
-function reservationOf(overrides: Partial<Reservation> = {}): Reservation {
-  return {
-    id: 31,
-    trip_id: 7,
-    seat_number: 12,
-    origin_position: 1,
-    destination_position: 4,
-    status: 'held',
-    price_cents: 7990,
-    expires_at: '2026-11-20T12:10:00Z',
-    expires_in_seconds: 540,
-    payment_status: null,
-    ...overrides,
-  }
-}
-
-function renderAt(path: string, auth = fakeAuth({ status: 'authenticated', user })) {
+function renderAt(path: string, auth = fakeAuth({ status: 'authenticated', user: ME })) {
   const router = createMemoryRouter(routes, { initialEntries: [path] })
   const view = render(<RouterProvider router={router} />, { wrapper: authWrapper(auth) })
   return { router, ...view }

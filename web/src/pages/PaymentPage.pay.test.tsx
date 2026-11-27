@@ -1,95 +1,23 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { createMemoryRouter, RouterProvider } from 'react-router'
-import { describe, expect, it, vi } from 'vitest'
-import type { Payment, Reservation, User } from '../api/types'
-import { routes } from '../router'
-import { authWrapper, fakeAuth } from '../test/auth'
+import { describe, expect, it } from 'vitest'
 import { jsonResponse } from '../test/http'
+import {
+  approved,
+  declined,
+  deferred,
+  offline,
+  payButton,
+  renderPayment,
+  reservationOf,
+  stubPaymentApi,
+} from '../test/payment'
 
-const ME: User = { id: 1, email: 'ana@exemplo.com', name: 'Ana' }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
-
-const approved: Payment = { payment_id: 9, status: 'approved', reservation_status: 'paid' }
-const declined: Payment = { payment_id: 9, status: 'declined', reservation_status: 'held' }
-
-function reservationOf(overrides: Partial<Reservation> = {}): Reservation {
-  return {
-    id: 31,
-    trip_id: 7,
-    seat_number: 12,
-    origin_position: 1,
-    destination_position: 4,
-    status: 'held',
-    price_cents: 7990,
-    expires_at: '2026-11-20T12:10:00Z',
-    expires_in_seconds: 540,
-    payment_status: null,
-    ...overrides,
-  }
-}
-
-/** Uma resposta que só chega quando o teste mandar: deixa o pedido "em andamento". */
-function deferred() {
-  let resolve: (response: Response) => void = () => {}
-  const promise = new Promise<Response>((done) => {
-    resolve = done
-  })
-  return { promise, resolve: (response: Response) => resolve(response) }
-}
-
-type PayReply = Response | Promise<Response> | Error
-
-interface PayCall {
-  method: string | undefined
-  key: string | null
-  body: unknown
-}
-
-/**
- * Responde à reserva e, na ordem do roteiro, a cada pedido de pagamento (um Error vira falha de
- * rede). Sem roteiro, o pagamento é aprovado. Anota o método, a chave e o corpo de cada pedido.
- */
-function stubApi(pays: PayReply[], reservation: Reservation = reservationOf()) {
-  const queue = [...pays]
-  const payCalls: PayCall[] = []
-
-  const fetchMock = vi.fn<typeof fetch>((input, init) => {
-    const url = String(input)
-    if (url === '/api/reservations/31') {
-      return Promise.resolve(jsonResponse(reservation))
-    }
-    if (url === '/api/reservations/31/pay') {
-      payCalls.push({
-        method: init?.method,
-        key: new Headers(init?.headers).get('Idempotency-Key'),
-        body: JSON.parse(String(init?.body)),
-      })
-      const next = queue.shift()
-      if (next instanceof Error) {
-        return Promise.reject(next)
-      }
-      return Promise.resolve(next ?? jsonResponse(approved))
-    }
-    return Promise.reject(new Error(`Chamada inesperada: ${url}`))
-  })
-  vi.stubGlobal('fetch', fetchMock)
-  return { payCalls }
-}
-
-function renderPayment() {
-  const router = createMemoryRouter(routes, { initialEntries: ['/reservas/31/pagamento'] })
-  return render(<RouterProvider router={router} />, {
-    wrapper: authWrapper(fakeAuth({ status: 'authenticated', user: ME })),
-  })
-}
-
-const payButton = () => screen.findByRole('button', { name: 'Pagar' })
-const offline = () => new TypeError('Failed to fetch')
 
 describe('PaymentPage: pagar', () => {
   it('mostra o botão Pagar e o modo demonstração, com a aprovação marcada', async () => {
-    stubApi([])
+    stubPaymentApi([])
     renderPayment()
 
     expect(await payButton()).toBeEnabled()
@@ -101,7 +29,7 @@ describe('PaymentPage: pagar', () => {
   })
 
   it('Pagar envia o POST com a chave de idempotência e o cenário "approve"', async () => {
-    const { payCalls } = stubApi([])
+    const { payCalls } = stubPaymentApi([])
     const user = userEvent.setup()
     renderPayment()
 
@@ -117,7 +45,7 @@ describe('PaymentPage: pagar', () => {
     ['Recusar o pagamento', 'decline'],
     ['Deixar em análise', 'delay'],
   ])('escolher "%s" envia o cenário "%s"', async (label, scenario) => {
-    const { payCalls } = stubApi([])
+    const { payCalls } = stubPaymentApi([])
     const user = userEvent.setup()
     renderPayment()
 
@@ -130,7 +58,7 @@ describe('PaymentPage: pagar', () => {
 
   it('enquanto envia, o botão fica desabilitado e diz "Pagando…"', async () => {
     const reply = deferred()
-    stubApi([reply.promise])
+    stubPaymentApi([reply.promise])
     const user = userEvent.setup()
     renderPayment()
 
@@ -143,7 +71,7 @@ describe('PaymentPage: pagar', () => {
 
   it('dois cliques no mesmo instante enviam um só pagamento', async () => {
     const reply = deferred()
-    const { payCalls } = stubApi([reply.promise])
+    const { payCalls } = stubPaymentApi([reply.promise])
     renderPayment()
     const button = await payButton()
 
@@ -161,7 +89,7 @@ describe('PaymentPage: pagar', () => {
   })
 
   it('falha de rede: tentar de novo reaproveita a mesma chave', async () => {
-    const { payCalls } = stubApi([offline(), jsonResponse(approved)])
+    const { payCalls } = stubPaymentApi([offline(), jsonResponse(approved)])
     const user = userEvent.setup()
     renderPayment()
 
@@ -175,7 +103,7 @@ describe('PaymentPage: pagar', () => {
   })
 
   it('depois de uma recusa (402), a próxima tentativa usa outra chave', async () => {
-    const { payCalls } = stubApi([jsonResponse(declined, 402), jsonResponse(approved)])
+    const { payCalls } = stubPaymentApi([jsonResponse(declined, 402), jsonResponse(approved)])
     const user = userEvent.setup()
     renderPayment()
 
@@ -189,7 +117,7 @@ describe('PaymentPage: pagar', () => {
   })
 
   it('trocar o cenário depois de uma falha muda o corpo, então a chave também muda', async () => {
-    const { payCalls } = stubApi([offline(), jsonResponse(declined, 402)])
+    const { payCalls } = stubPaymentApi([offline(), jsonResponse(declined, 402)])
     const user = userEvent.setup()
     renderPayment()
 
@@ -204,7 +132,7 @@ describe('PaymentPage: pagar', () => {
   })
 
   it('erro de regra mostra a mensagem da API e libera o botão', async () => {
-    stubApi([
+    stubPaymentApi([
       jsonResponse(
         { code: 'reservation_not_payable', message: 'Esta reserva não pode ser paga.' },
         409,
@@ -220,7 +148,7 @@ describe('PaymentPage: pagar', () => {
   })
 
   it('reserva que não está aguardando pagamento não tem Pagar nem modo demonstração', async () => {
-    stubApi([], reservationOf({ status: 'paid' }))
+    stubPaymentApi([], reservationOf({ status: 'paid' }))
     renderPayment()
 
     await screen.findByText('Esta reserva não está aguardando pagamento.')
