@@ -91,3 +91,9 @@ export interface Payment {
   status: string
   reservation_status: string
 }
+/** Resposta de POST /api/reservations/{id}/cancel. refund_status: none, pending ou refunded. */
+export interface CancelResult {
+  reservation_id: number
+  status: string
+  refund_status: string
+}
