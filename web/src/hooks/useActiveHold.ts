@@ -8,7 +8,7 @@ interface Found {
 }
 
 /** Só uma reserva 'held' com prazo e tempo restante vira um hold que dá para retomar. */
-function toHold(reservation: Reservation): Hold | null {
+export function toHold(reservation: Reservation): Hold | null {
   if (
     reservation.status !== 'held' ||
     reservation.expires_at === null ||

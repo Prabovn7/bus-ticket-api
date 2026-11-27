@@ -12,15 +12,26 @@ const SCENARIOS: { value: PayScenario; label: string }[] = [
 
 const GENERIC_MESSAGE = 'Algo deu errado. Tente de novo.'
 
+// Os dois erros que encerram a reserva: não adianta tentar pagar de novo.
+const ENDED_CODES = ['hold_expired', 'seat_lost']
+
+interface PayPanelProps {
+  reservationId: number
+  onApproved: () => void
+  onPending: () => void
+  onEnded: (message: string) => void
+}
+
 interface Attempt {
   key: string
   scenario: PayScenario
 }
 
-function PayPanel({ reservationId }: { reservationId: number }) {
+function PayPanel({ reservationId, onApproved, onPending, onEnded }: PayPanelProps) {
   const [scenario, setScenario] = useState<PayScenario>('approve')
   const [pending, setPending] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [declined, setDeclined] = useState(false)
   // A tentativa atual: a chave de idempotência e o cenário que ela vale. Repetir a tentativa
   // (depois de uma falha) reaproveita a chave; um pedido novo ou outro cenário gera outra.
   const attempt = useRef<Attempt | null>(null)
@@ -49,15 +60,29 @@ function PayPanel({ reservationId }: { reservationId: number }) {
     sending.current = true
     setPending(true)
     setNotice(null)
+    setDeclined(false)
     const controller = new AbortController()
     request.current = controller
 
     try {
-      await pay(reservationId, scenario, keyFor(scenario), controller.signal)
+      const payment = await pay(reservationId, scenario, keyFor(scenario), controller.signal)
       // Aprovado, recusado ou em análise: a tentativa terminou, a próxima será outra.
       attempt.current = null
+      if (payment.status === 'approved') {
+        onApproved()
+      } else if (payment.status === 'pending') {
+        onPending()
+      } else if (payment.status === 'declined') {
+        setDeclined(true)
+      } else {
+        setNotice(GENERIC_MESSAGE)
+      }
     } catch (error) {
       if (controller.signal.aborted) {
+        return
+      }
+      if (error instanceof ApiRequestError && ENDED_CODES.includes(error.code)) {
+        onEnded(error.message)
         return
       }
       setNotice(error instanceof ApiRequestError ? error.message : GENERIC_MESSAGE)
@@ -84,6 +109,7 @@ function PayPanel({ reservationId }: { reservationId: number }) {
           </label>
         ))}
       </fieldset>
+      {declined ? <p role="status">Pagamento recusado.</p> : null}
       {notice ? <ErrorMessage>{notice}</ErrorMessage> : null}
       <button type="button" className="botao" disabled={pending} onClick={() => void submit()}>
         {pending ? 'Pagando…' : 'Pagar'}
