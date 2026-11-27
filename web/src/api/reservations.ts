@@ -5,3 +5,8 @@ import type { Reservation } from './types'
 export function listReservations(signal?: AbortSignal): Promise<Reservation[]> {
   return authedFetch<Reservation[]>('/api/reservations', signal ? { signal } : undefined)
 }
+
+/** Uma reserva da pessoa logada, pelo id. Exige login; 404 se não existir ou não for dela. */
+export function getReservation(id: number, signal?: AbortSignal): Promise<Reservation> {
+  return authedFetch<Reservation>(`/api/reservations/${id}`, signal ? { signal } : undefined)
+}
