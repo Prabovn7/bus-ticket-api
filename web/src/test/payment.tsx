@@ -12,6 +12,7 @@ export const ME: User = { id: 1, email: 'ana@exemplo.com', name: 'Ana' }
 
 export const approved: Payment = { payment_id: 9, status: 'approved', reservation_status: 'paid' }
 export const declined: Payment = { payment_id: 9, status: 'declined', reservation_status: 'held' }
+export const pending: Payment = { payment_id: 9, status: 'pending', reservation_status: 'held' }
 
 export function reservationOf(overrides: Partial<Reservation> = {}): Reservation {
   return {
@@ -48,16 +49,24 @@ export interface PayCall {
 
 /**
  * Responde à reserva e, na ordem do roteiro, a cada pedido de pagamento (um Error vira falha de
- * rede). Sem roteiro, o pagamento é aprovado. Anota o método, a chave e o corpo de cada pedido.
+ * rede). Sem roteiro, o pagamento é aprovado. Anota o método, a chave e o corpo de cada pedido
+ * e conta quantas vezes a reserva foi lida. Com uma lista de reservas, cada leitura mostra a
+ * próxima e a última se repete.
  */
-export function stubPaymentApi(pays: PayReply[], reservation: Reservation = reservationOf()) {
+export function stubPaymentApi(
+  pays: PayReply[],
+  reservations: Reservation | Reservation[] = reservationOf(),
+) {
   const queue = [...pays]
+  const shown = Array.isArray(reservations) ? [...reservations] : [reservations]
   const payCalls: PayCall[] = []
+  let reads = 0
 
   const fetchMock = vi.fn<typeof fetch>((input, init) => {
     const url = String(input)
     if (url === '/api/reservations/31') {
-      return Promise.resolve(jsonResponse(reservation))
+      reads += 1
+      return Promise.resolve(jsonResponse(shown.length > 1 ? shown.shift() : shown[0]))
     }
     if (url === '/api/reservations/31/pay') {
       payCalls.push({
@@ -74,7 +83,7 @@ export function stubPaymentApi(pays: PayReply[], reservation: Reservation = rese
     return Promise.reject(new Error(`Chamada inesperada: ${url}`))
   })
   vi.stubGlobal('fetch', fetchMock)
-  return { payCalls }
+  return { payCalls, reads: () => reads }
 }
 
 /** Abre a página de pagamento da reserva 31 com a pessoa logada. */

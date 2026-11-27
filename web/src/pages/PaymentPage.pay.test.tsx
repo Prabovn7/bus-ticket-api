@@ -65,7 +65,7 @@ describe('PaymentPage: pagar', () => {
     await user.click(await payButton())
 
     expect(await screen.findByRole('button', { name: 'Pagando…' })).toBeDisabled()
-    reply.resolve(jsonResponse(approved))
+    reply.resolve(jsonResponse(declined, 402))
     expect(await payButton()).toBeEnabled()
   })
 
@@ -84,7 +84,7 @@ describe('PaymentPage: pagar', () => {
     await waitFor(() => expect(payCalls).toHaveLength(1))
     await act(async () => {}) // dá tempo de um segundo pedido, se existisse, chegar
     expect(payCalls).toHaveLength(1)
-    reply.resolve(jsonResponse(approved))
+    reply.resolve(jsonResponse(declined, 402))
     expect(await payButton()).toBeEnabled()
   })
 
